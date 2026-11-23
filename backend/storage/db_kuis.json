@@ -13,10 +13,10 @@
             "start_at": "",
             "end_at": "",
             "status": "DRAFT",
-            "pin": "",
-            "pin_enabled": false,
-            "pin_auto_refresh": false,
-            "pin_updated_at": 1795303121,
+            "pin": "TRZ5XN",
+            "pin_enabled": true,
+            "pin_auto_refresh": true,
+            "pin_updated_at": 1795476515,
             "questions": [
                 {
                     "type": "mc",
@@ -44864,6 +44864,22 @@
             "action": "Import siswa",
             "target": "Baru: 471, Diperbarui: 0",
             "detail": "",
+            "ip": "127.0.0.1"
+        },
+        {
+            "time": "2026-11-23T23:22:28+01:00",
+            "user": "guru",
+            "action": "Login guru",
+            "target": "Dashboard Guru",
+            "detail": "Autentikasi sesi berhasil",
+            "ip": "127.0.0.1"
+        },
+        {
+            "time": "2026-11-23T23:47:40+01:00",
+            "user": "guru",
+            "action": "Simpan paket kuis",
+            "target": "",
+            "detail": "2 paket",
             "ip": "127.0.0.1"
         }
     ],

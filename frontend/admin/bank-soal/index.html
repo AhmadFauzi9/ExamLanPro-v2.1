@@ -254,75 +254,78 @@
     </div>    
 
     <!-- MODAL 2: Tambah / Edit Butir Soal -->
-    <div id="question-modal" class="hidden fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-[60] flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-2xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-            <div class="flex items-center justify-between border-b pb-3">
+    <div id="question-modal" class="hidden fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-[60] flex items-center justify-center p-4" onclick="if(event.target === this) closeQuestionModal()">
+        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between shrink-0 bg-white">
                 <div class="flex items-center gap-2">
                     <div class="w-8 h-8 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center font-bold">
                         <i class="fa-solid fa-pen-to-square"></i>
                     </div>
                     <h3 id="question-modal-title" class="font-bold text-slate-800 text-sm">Tambah Soal Baru</h3>
                 </div>
-                <button type="button" onclick="closeQuestionModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                <button type="button" onclick="closeQuestionModal()" class="text-slate-400 hover:text-slate-600 p-1 cursor-pointer">
                     <i class="fa-solid fa-xmark text-lg"></i>
                 </button>
             </div>
 
-            <form id="question-form" onsubmit="saveQuestion(event)" class="space-y-3.5 text-xs">
-                <input type="hidden" id="q-quiz-id">
-                <input type="hidden" id="q-index">
-                <input type="hidden" id="q-existing-image">
-                <input type="hidden" id="q-image-action">
+            <form id="question-form" onsubmit="saveQuestion(event)" class="flex-1 flex flex-col min-h-0">
+                <div class="flex-1 overflow-y-auto custom-scrollbar p-5 sm:p-6 space-y-3.5 text-xs">
+                    <input type="hidden" id="q-quiz-id">
+                    <input type="hidden" id="q-index">
+                    <input type="hidden" id="q-existing-image">
+                    <input type="hidden" id="q-image-action">
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Bentuk / Tipe Soal <span class="text-rose-500">*</span></label>
+                            <select id="q-type-select" onchange="renderQuestionEditorFields()" class="w-full px-3 py-2 rounded-xl border border-slate-200 outline-none text-xs bg-white font-bold text-slate-800">
+                                <option value="mc">1. Pilihan Ganda (mc)</option>
+                                <option value="complex">2. Pilihan Ganda Kompleks (complex)</option>
+                                <option value="cause_effect">3. Sebab Akibat (cause_effect)</option>
+                                <option value="case_analysis">4. Analisis Kasus (case_analysis)</option>
+                                <option value="matching">5. Menjodohkan (matching)</option>
+                                <option value="essay">6. Uraian / Esai (essay)</option>
+                                <option value="short_answer">7. Isian Singkat (short_answer)</option>
+                                <option value="scaled">8. Skala Likert (scaled)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">Lampiran Gambar (Opsional)</label>
+                            <input type="file" id="q-image-input" accept="image/png, image/jpeg, image/jpg" onchange="handleQuestionImageSelect(event)" class="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 border border-slate-200 rounded-xl p-1">
+                        </div>
+                    </div>
+
+                    <!-- Preview Gambar -->
+                    <div id="q-image-preview-container" class="hidden p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <span class="text-[11px] font-bold text-slate-700"><i class="fa-solid fa-image text-brand-600 mr-1"></i> Preview Gambar:</span>
+                            <button type="button" onclick="removeQuestionImage()" class="text-rose-600 hover:text-rose-800 font-bold text-[11px]"><i class="fa-solid fa-trash-can mr-1"></i> Hapus Gambar</button>
+                        </div>
+                        <div class="flex justify-center bg-white p-2 rounded-lg border border-slate-100">
+                            <img id="q-image-preview" src="" alt="Preview Gambar" class="max-h-40 object-contain rounded">
+                        </div>
+                    </div>
+
                     <div>
-                        <label class="block font-semibold text-slate-700 mb-1">Bentuk / Tipe Soal <span class="text-rose-500">*</span></label>
-                        <select id="q-type-select" onchange="renderQuestionEditorFields()" class="w-full px-3 py-2 rounded-xl border border-slate-200 outline-none text-xs bg-white font-bold text-slate-800">
-                            <option value="mc">1. Pilihan Ganda (mc)</option>
-                            <option value="complex">2. Pilihan Ganda Kompleks (complex)</option>
-                            <option value="cause_effect">3. Sebab Akibat (cause_effect)</option>
-                            <option value="case_analysis">4. Analisis Kasus (case_analysis)</option>
-                            <option value="matching">5. Menjodohkan (matching)</option>
-                            <option value="essay">6. Uraian / Esai (essay)</option>
-                            <option value="short_answer">7. Isian Singkat (short_answer)</option>
-                            <option value="scaled">8. Skala Likert (scaled)</option>
-                        </select>
+                        <label class="block font-semibold text-slate-700 mb-1">Pertanyaan / Instruksi Soal <span class="text-rose-500">*</span></label>
+                        <textarea id="q-text-input" rows="3" required placeholder="Tuliskan teks pertanyaan soal..." class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none text-xs"></textarea>
                     </div>
+
+                    <!-- Container Dinamis Opsi / Pasangan / Isian -->
+                    <div id="q-type-specific-container" class="space-y-2 p-3 bg-slate-50/80 rounded-xl border border-slate-200">
+                        <!-- Dynamic Fields -->
+                    </div>
+
                     <div>
-                        <label class="block font-semibold text-slate-700 mb-1">Lampiran Gambar (Opsional)</label>
-                        <input type="file" id="q-image-input" accept="image/png, image/jpeg, image/jpg" onchange="handleQuestionImageSelect(event)" class="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[11px] file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 border border-slate-200 rounded-xl p-1">
+                        <label class="block font-semibold text-slate-700 mb-1">Pembahasan / Penjelasan (Opsional)</label>
+                        <textarea id="q-explanation-input" rows="2" placeholder="Penjelasan atau kunci pembahasan saat hasil dibuka..." class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none text-xs"></textarea>
                     </div>
                 </div>
 
-                <!-- Preview Gambar -->
-                <div id="q-image-preview-container" class="hidden p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
-                    <div class="flex items-center justify-between mb-1.5">
-                        <span class="text-[11px] font-bold text-slate-700"><i class="fa-solid fa-image text-brand-600 mr-1"></i> Preview Gambar:</span>
-                        <button type="button" onclick="removeQuestionImage()" class="text-rose-600 hover:text-rose-800 font-bold text-[11px]"><i class="fa-solid fa-trash-can mr-1"></i> Hapus Gambar</button>
-                    </div>
-                    <div class="flex justify-center bg-white p-2 rounded-lg border border-slate-100">
-                        <img id="q-image-preview" src="" alt="Preview Gambar" class="max-h-40 object-contain rounded">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block font-semibold text-slate-700 mb-1">Pertanyaan / Instruksi Soal <span class="text-rose-500">*</span></label>
-                    <textarea id="q-text-input" rows="3" required placeholder="Tuliskan teks pertanyaan soal..." class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none text-xs"></textarea>
-                </div>
-
-                <!-- Container Dinamis Opsi / Pasangan / Isian -->
-                <div id="q-type-specific-container" class="space-y-2 p-3 bg-slate-50/80 rounded-xl border border-slate-200">
-                    <!-- Dynamic Fields -->
-                </div>
-
-                <div>
-                    <label class="block font-semibold text-slate-700 mb-1">Pembahasan / Penjelasan (Opsional)</label>
-                    <textarea id="q-explanation-input" rows="2" placeholder="Penjelasan atau kunci pembahasan saat hasil dibuka..." class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-brand-500 outline-none text-xs"></textarea>
-                </div>
-
-                <div class="pt-3 flex justify-end gap-2 border-t">
-                    <button type="button" onclick="closeQuestionModal()" class="btn-compact border border-slate-300 text-slate-600 hover:bg-slate-50">Batal</button>
-                    <button type="submit" class="btn-compact bg-brand-600 hover:bg-brand-700 text-white font-bold">Simpan</button>
+                <!-- Modal Footer (Fixed at Bottom) -->
+                <div class="px-5 py-3.5 sm:px-5 sm:py-3 border-t border-slate-200 bg-slate-50/80 flex items-center justify-end gap-2 shrink-0">
+                    <button type="button" onclick="closeQuestionModal()" class="btn-compact border border-slate-300 text-slate-600 hover:bg-slate-100 cursor-pointer">Batal</button>
+                    <button type="submit" class="btn-compact bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-2xs cursor-pointer">Simpan</button>
                 </div>
             </form>
         </div>
@@ -587,21 +590,21 @@
 
                 const isAutoPin = !!(q.pin && q.pin_auto_refresh !== false && q.pin_auto_refresh !== 'false');
                 const tokenBadge = q.pin ? `
-                    <span class="inline-flex items-center gap-1.5 bg-blue-50 text-blue-800 border border-blue-200 px-2 py-0.5 rounded-lg text-xs font-mono font-bold" title="Token Akses Siswa ${isAutoPin ? '(Otomatis berganti tiap 10 menit)' : ''}">
-                        <i class="fa-solid fa-key text-[10px] text-blue-600"></i> <span class="tracking-widest font-black" id="quiz-token-text-${q.id}">${q.pin}</span>
+                    <span class="inline-flex items-center gap-1 bg-blue-50 text-blue-800 border border-blue-200 px-1.5 py-0.5 rounded-lg text-[11px] font-mono font-bold shrink-0" title="Token Akses Siswa ${isAutoPin ? '(Otomatis berganti tiap 10 menit)' : ''}">
+                        <i class="fa-solid fa-key text-[9px] text-blue-600"></i> <span class="tracking-wider font-extrabold" id="quiz-token-text-${q.id}">${q.pin}</span>
                         <button type="button" onclick="copyQuizToken('${q.pin}', this)" class="p-0.5 text-blue-600 hover:text-blue-900 transition focus:outline-none" title="Salin Token">
-                            <i class="fa-regular fa-copy"></i>
+                            <i class="fa-regular fa-copy text-[10px]"></i>
                         </button>
                         ${isAutoPin ? `
-                            <span class="ml-1 pl-1.5 border-l border-blue-200 text-[10px] font-semibold text-blue-600 flex items-center gap-1 font-sans" title="Sisa waktu sebelum token otomatis berubah">
-                                <i class="fa-regular fa-clock text-[9px]"></i>
+                            <span class="ml-0.5 pl-1 border-l border-blue-200 text-[9px] font-semibold text-blue-600 flex items-center gap-0.5 font-sans" title="Sisa waktu sebelum token otomatis berubah">
+                                <i class="fa-regular fa-clock text-[8px]"></i>
                                 <span class="token-timer" data-quiz-id="${q.id}" data-updated-at="${q.pin_updated_at || Math.floor(Date.now()/1000)}">10:00</span>
                             </span>
                         ` : ''}
                     </span>
                 ` : `
-                    <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-500 px-2 py-0.5 rounded-lg text-xs font-medium" title="Ujian tanpa token">
-                        <i class="fa-solid fa-lock-open text-[10px]"></i> Tanpa Token
+                    <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-lg text-[10px] font-medium shrink-0" title="Ujian tanpa token">
+                        <i class="fa-solid fa-lock-open text-[9px]"></i> Tanpa Token
                     </span>
                 `;
 
@@ -663,11 +666,14 @@
                             </div>
 
                             <!-- Token Akses & KKM -->
-                            <div class="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-1 flex-wrap">
-                                <span class="text-[10px] font-semibold text-slate-500 flex items-center gap-1">
-                                    <i class="fa-solid fa-shield-halved text-[10px] text-slate-400"></i> Token: ${tokenBadge}
-                                </span>
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs" title="Standar KKM Kelulusan">
+                            <div class="pt-2 border-t border-slate-200/60 flex items-center justify-between gap-1.5">
+                                <div class="flex items-center gap-1 min-w-0">
+                                    <span class="text-[10px] font-semibold text-slate-500 flex items-center gap-1 shrink-0">
+                                        <i class="fa-solid fa-shield-halved text-[10px] text-slate-400"></i> Token:
+                                    </span>
+                                    ${tokenBadge}
+                                </div>
+                                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs shrink-0 whitespace-nowrap" title="Standar KKM Kelulusan">
                                     <i class="fa-solid fa-bullseye text-[9px] text-indigo-600"></i> KKM: ${q.kkm !== undefined && q.kkm !== null ? q.kkm : 70}
                                 </span>
                             </div>
@@ -952,47 +958,56 @@
 
         // Helper: Badge Tipe Soal
         function getQuestionTypeBadge(type) {
-            switch (type) {
-                case 'mc':
-                    return '<span class="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-bold border border-blue-200">Pilihan Ganda</span>';
-                case 'complex':
-                    return '<span class="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-bold border border-purple-200">Ganda Kompleks</span>';
-                case 'cause_effect':
-                    return '<span class="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold border border-amber-200">Sebab Akibat</span>';
-                case 'case_analysis':
-                    return '<span class="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded font-bold border border-indigo-200">Analisis Kasus</span>';
-                case 'matching':
-                    return '<span class="text-[10px] bg-teal-100 text-teal-800 px-2 py-0.5 rounded font-bold border border-teal-200">Menjodohkan</span>';
-                case 'essay':
-                    return '<span class="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold border border-emerald-200"><i class="fa-solid fa-pen-nib mr-0.5"></i> Uraian / Esai</span>';
-                case 'short_answer':
-                    return '<span class="text-[10px] bg-orange-100 text-orange-800 px-2 py-0.5 rounded font-bold border border-orange-200">Isian Singkat</span>';
-                case 'scaled':
-                    return '<span class="text-[10px] bg-rose-100 text-rose-800 px-2 py-0.5 rounded font-bold border border-rose-200">Skala Likert</span>';
-                default:
-                    return `<span class="text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-mono uppercase">${escapeHtml(type || 'mc')}</span>`;
-            }
+            const badges = {
+                'mc': { label: 'Pilihan Ganda', bg: 'bg-brand-50 text-brand-700 border-brand-200' },
+                'complex': { label: 'Ganda Kompleks', bg: 'bg-purple-50 text-purple-700 border-purple-200' },
+                'cause_effect': { label: 'Sebab Akibat', bg: 'bg-amber-50 text-amber-700 border-amber-200' },
+                'case_analysis': { label: 'Analisis Kasus', bg: 'bg-blue-50 text-blue-700 border-blue-200' },
+                'matching': { label: 'Menjodohkan', bg: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+                'essay': { label: 'Uraian / Esai', bg: 'bg-rose-50 text-rose-700 border-rose-200' },
+                'short_answer': { label: 'Isian Singkat', bg: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
+                'scaled': { label: 'Skala Likert', bg: 'bg-teal-50 text-teal-700 border-teal-200' }
+            };
+            const b = badges[type] || { label: 'Pilihan Ganda', bg: 'bg-slate-100 text-slate-700 border-slate-200' };
+            return `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${b.bg}">${b.label}</span>`;
         }
 
-        // Helper: Build Question List HTML (DRY)
+        // Helper: Build Question List HTML (Matching ExamLANPro-Next)
         function buildQuestionsListHtml(quiz) {
             if (!quiz || !Array.isArray(quiz.questions) || !quiz.questions.length) {
-                return '<p class="text-xs text-slate-400 text-center py-6">Belum ada soal dalam kuis ini. Klik "Tambah Soal".</p>';
+                return `
+                    <div class="p-8 text-center text-slate-400">
+                        <i class="fa-solid fa-file-circle-question text-3xl mb-2 text-slate-300"></i>
+                        <p class="text-xs">Belum ada butir soal pada paket ini.</p>
+                    </div>
+                `;
             }
             return quiz.questions.map((q, idx) => `
-                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between gap-3 text-xs">
-                    <div class="space-y-1 min-w-0">
+                <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 text-xs">
+                    <div class="flex items-center justify-between">
                         <div class="flex items-center gap-1.5 flex-wrap">
-                            <span class="font-bold text-slate-800">Soal ${idx + 1}</span>
+                            <span class="font-bold text-slate-800 bg-white border border-slate-200 px-2 py-0.5 rounded-md text-[11px]">
+                                No. ${idx + 1}
+                            </span>
                             ${getQuestionTypeBadge(q.type || 'mc')}
-                            ${q.image ? '<span class="inline-flex items-center gap-1 text-[10px] bg-sky-50 text-sky-700 px-1.5 py-0.5 rounded-full border border-sky-200 font-medium"><i class="fa-solid fa-image"></i> Gambar</span>' : ''}
+                            ${q.image ? `
+                                <span class="bg-sky-50 text-sky-700 text-[10px] px-1.5 py-0.5 rounded border border-sky-200 flex items-center gap-1 font-medium">
+                                    <i class="fa-solid fa-image"></i> Ada Gambar
+                                </span>
+                            ` : ''}
                         </div>
-                        <p class="text-slate-600 line-clamp-1 truncate">${escapeHtml(q.question || q.statement || 'Analisis Kasus')}</p>
+                        <div class="flex items-center gap-1">
+                            <button type="button" onclick="openQuestionModal('${quiz.id}', ${idx})" class="p-1.5 text-slate-500 hover:text-brand-600 hover:bg-slate-100 rounded-lg transition cursor-pointer" title="Edit Soal">
+                                <i class="fa-solid fa-pen text-xs"></i>
+                            </button>
+                            <button type="button" onclick="deleteQuestion('${quiz.id}', ${idx})" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition cursor-pointer" title="Hapus Soal">
+                                <i class="fa-solid fa-trash-can text-xs"></i>
+                            </button>
+                        </div>
                     </div>
-                    <div class="flex items-center gap-1 shrink-0">
-                        <button type="button" onclick="openQuestionModal('${quiz.id}', ${idx})" class="btn-compact bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold"><i class="fa-solid fa-pen text-[10px] mr-1"></i> Edit</button>
-                        <button type="button" onclick="deleteQuestion('${quiz.id}', ${idx})" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"><i class="fa-solid fa-trash-can text-xs"></i></button>
-                    </div>
+                    <p class="text-slate-700 line-clamp-2 leading-relaxed">
+                        ${escapeHtml(q.content || q.question || q.statement || '-')}
+                    </p>
                 </div>
             `).join('');
         }
@@ -1004,28 +1019,32 @@
             if (!quiz) return;
 
             const modalHtml = `
-                <div id="qm-dialog" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+                <div id="qm-dialog" class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4" onclick="if(event.target === this) this.remove()">
                     <div class="bg-white rounded-2xl max-w-xl w-full p-5 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
                         <div class="flex justify-between items-center border-b pb-3">
                             <div>
                                 <h3 class="font-bold text-slate-800 text-sm leading-tight">${escapeHtml(quiz.title)}</h3>
                                 <p id="qm-count" class="text-xs text-slate-500 mt-0.5">${(quiz.questions || []).length} soal terdaftar</p>
                             </div>
-                            <button type="button" onclick="document.getElementById('qm-dialog').remove()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+                            <button type="button" onclick="document.getElementById('qm-dialog').remove()" class="text-slate-400 hover:text-slate-600 p-1 cursor-pointer">
+                                <i class="fa-solid fa-xmark text-lg"></i>
+                            </button>
                         </div>
                         <div id="qm-questions-list" class="max-h-80 overflow-y-auto space-y-2 custom-scrollbar">
                             ${buildQuestionsListHtml(quiz)}
                         </div>
-                        <div class="pt-2 flex justify-between items-center border-t gap-2 flex-wrap">
+                        <div class="pt-2 flex flex-wrap justify-between items-center gap-2 border-t">
                             <div class="flex items-center gap-2">
-                                <button type="button" onclick="openQuestionModal('${quiz.id}')" class="btn-compact bg-brand-600 hover:bg-brand-700 text-white font-bold flex items-center gap-1.5 shadow-xs">
+                                <button type="button" onclick="openQuestionModal('${quiz.id}')" class="btn-compact bg-brand-600 hover:bg-brand-700 text-white font-bold flex items-center gap-1.5 shadow-xs cursor-pointer">
                                     <i class="fa-solid fa-plus text-xs"></i> <span>Tambah Soal</span>
                                 </button>
-                                <button type="button" onclick="openPrintModal('${quiz.id}')" class="btn-compact bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold flex items-center gap-1.5 shadow-2xs" title="Cetak atau Download Soal (PDF & Word)">
+                                <button type="button" onclick="openPrintModal('${quiz.id}')" class="btn-compact bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold flex items-center gap-1.5 shadow-2xs cursor-pointer" title="Cetak atau Download Soal (PDF & Word)">
                                     <i class="fa-solid fa-print text-xs text-blue-600"></i> <span>Cetak / Download</span>
                                 </button>
                             </div>
-                            <button type="button" onclick="document.getElementById('qm-dialog').remove()" class="btn-compact border border-slate-300 text-slate-600 hover:bg-slate-50">Selesai</button>
+                            <button type="button" onclick="document.getElementById('qm-dialog').remove()" class="btn-compact border border-slate-300 text-slate-600 hover:bg-slate-50 cursor-pointer">
+                                Selesai
+                            </button>
                         </div>
                     </div>
                 </div>
