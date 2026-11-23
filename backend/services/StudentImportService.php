@@ -26,6 +26,7 @@ class StudentImportService {
             $name = trim((string)($r['name'] ?? ''));
             $class = trim((string)($r['class'] ?? ''));
             $nis = trim((string)($r['nis'] ?? ''));
+            $no_absen = trim((string)($r['no_absen'] ?? $r['absen'] ?? ''));
             $tahun_ajaran = trim((string)($r['tahun_ajaran'] ?? $r['academic_year'] ?? '2026-2027'));
             $photo = (string)($r['photo'] ?? '');
             if ($name === '') continue;
@@ -35,6 +36,9 @@ class StudentImportService {
                 $db['students'][$idx]['name'] = $name;
                 $db['students'][$idx]['class'] = $class ?: $db['students'][$idx]['class'];
                 $db['students'][$idx]['tahun_ajaran'] = $tahun_ajaran ?: ($db['students'][$idx]['tahun_ajaran'] ?? '2026-2027');
+                if ($no_absen !== '') {
+                    $db['students'][$idx]['no_absen'] = $no_absen;
+                }
                 if (empty($db['students'][$idx]['password'])) {
                     $db['students'][$idx]['password'] = Utils::generateStudentPassword();
                 }
@@ -45,6 +49,7 @@ class StudentImportService {
             } else {
                 $newSt = [
                     'id' => 'std_' . bin2hex(random_bytes(6)),
+                    'no_absen' => $no_absen,
                     'nis' => $nis,
                     'name' => $name,
                     'class' => $class,

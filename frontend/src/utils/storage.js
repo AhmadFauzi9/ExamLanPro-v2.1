@@ -31,7 +31,8 @@ export const Storage = {
         PENDING_ANSWERS: 'examlan_pending_answers',
         STUDENT_SESSION: 'examlan_student_session',
         PENDING_EXAM_INFO: 'examlan_pending_exam_info',
-        PENDING_RESUME_INFO: 'examlan_pending_resume_info'
+        PENDING_RESUME_INFO: 'examlan_pending_resume_info',
+        PENDING_SUBMISSION: 'examlan_pending_submission'
     },
 
     /**
@@ -171,6 +172,22 @@ export const Storage = {
 
     clearPendingResumeInfo() {
         this.remove(this.KEYS.PENDING_RESUME_INFO);
+    },
+
+    getPendingSubmission() {
+        return this.get(this.KEYS.PENDING_SUBMISSION);
+    },
+
+    setPendingSubmission(submission) {
+        if (!submission) {
+            this.clearPendingSubmission();
+            return;
+        }
+        this.set(this.KEYS.PENDING_SUBMISSION, submission);
+    },
+
+    clearPendingSubmission() {
+        this.remove(this.KEYS.PENDING_SUBMISSION);
     },
 
     clearAllExamData() {

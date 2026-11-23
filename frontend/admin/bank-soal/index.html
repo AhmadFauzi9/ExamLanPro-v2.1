@@ -228,7 +228,7 @@
                                 <label class="block font-bold text-amber-950 text-xs flex items-center gap-1.5">
                                     <i class="fa-solid fa-file-import text-amber-600"></i> Import Soal (Word / Excel)
                                 </label>
-                                <button type="button" onclick="openGuideFromQuizForm()" class="btn-compact py-1 px-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-2 rounded-lg shadow-2xs transition" title="Buka dialog unduh template resmi Word & Excel">
+                                <button type="button" onclick="openGuideFromQuizForm()" class="btn-compact py-1 px-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-2 rounded-lg shadow-2xs transition" title="Buka dialog unduh template resmi Word">
                                     <small class="flex items-center gap-2">
                                         <i class="fa-solid fa-download text-xs"></i> <span>Template</span>
                                     </small>
@@ -338,7 +338,7 @@
                     </div>
                     <div>
                         <h3 class="font-bold text-slate-800 text-sm sm:text-base">Download Template Soal & Panduan Format</h3>
-                        <p class="text-[11px] text-slate-500">Mendukung Microsoft Word (.docx, .doc) dan Microsoft Excel (.xlsx)</p>
+                        <p class="text-[11px] text-slate-500">Format Resmi Microsoft Word (.docx, .doc)</p>
                     </div>
                 </div>
                 <button type="button" onclick="closeMassImportModal()" class="text-slate-400 hover:text-slate-600 p-1">
@@ -349,28 +349,112 @@
             <!-- Download Templates -->
             <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
                 <p class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                    <i class="fa-solid fa-download text-amber-600"></i> Pilih Berkas Template Resmi untuk Diunduh:
+                    <i class="fa-solid fa-download text-amber-600"></i> Berkas Template Resmi untuk Diunduh:
                 </p>
-                <div class="grid grid-cols-2 gap-3">
-                    <button type="button" onclick="downloadWordTextTemplate()" class="btn-compact py-2.5 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 flex items-center justify-center gap-2 font-bold transition shadow-2xs">
-                        <i class="fa-solid fa-file-word text-base text-blue-600"></i> <span>Template Word (.doc)</span>
-                    </button>
-                    <button type="button" onclick="downloadExcelTemplate()" class="btn-compact py-2.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 flex items-center justify-center gap-2 font-bold transition shadow-2xs">
-                        <i class="fa-solid fa-file-excel text-base text-emerald-600"></i> <span>Template Excel (.xlsx)</span>
+                <div>
+                    <button type="button" onclick="downloadWordTextTemplate()" class="w-full btn-compact py-2.5 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 flex items-center justify-center gap-2 font-bold transition shadow-2xs">
+                        <i class="fa-solid fa-file-word text-base text-blue-600"></i> <span>Download Template Soal Word (.doc)</span>
                     </button>
                 </div>
                 <div class="text-[11px] text-slate-600 space-y-1.5 pt-2 border-t border-slate-200/80">
                     <p class="font-bold text-slate-700 flex items-center gap-1"><i class="fa-solid fa-circle-info text-brand-600"></i> Ketentuan Format Penulisan:</p>
                     <ul class="list-disc list-inside space-y-1 text-slate-500 text-[11px] pl-1">
                         <li>Mendukung seluruh bentuk soal: Pilihan Ganda (mc), Pilihan Ganda Kompleks (complex), Sebab Akibat (cause_effect), Analisis Kasus (case_analysis), Menjodohkan (matching), dan Uraian / Esai (essay).</li>
-                        <li>Gambar dapat langsung disisipkan (paste) di dalam dokumen Word/Excel dan otomatis disimpan ke server.</li>
-                        <li>Pada dokumen Word, pisahkan setiap butir soal menggunakan tiga tanda strip (<code>---</code>).</li>
+                        <li>Gambar dapat langsung disisipkan (paste) di dalam dokumen Word dan otomatis disimpan ke server.</li>
+                        <li>Pisahkan setiap butir soal menggunakan nomor soal atau tiga tanda strip (<code>---</code>).</li>
+                        <li>Simpan berkas dalam format <b>.docx</b> atau <b>.doc</b> lalu unggah pada form paket soal.</li>
                     </ul>
                 </div>
             </div>
 
             <div class="pt-3 flex justify-end border-t">
                 <button type="button" onclick="closeMassImportModal()" class="btn-compact bg-brand-600 hover:bg-brand-700 text-white font-bold px-5">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 4: Cetak / Download Soal Siap Print (PDF & Word) -->
+    <div id="modal-print-quiz" class="hidden fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-[95] flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-150">
+            <div class="flex items-center justify-between border-b pb-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-lg font-bold">
+                        <i class="fa-solid fa-print"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-sm sm:text-base">Cetak / Download Soal</h3>
+                        <p id="print-quiz-subtitle" class="text-[11px] text-slate-500">Naskah soal siap print & kunci jawaban</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closePrintModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <input type="hidden" id="print-target-quiz-id" value="">
+
+            <div class="space-y-3.5 text-xs">
+                <!-- Info Paket -->
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+                    <p class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Paket Soal Terpilih</p>
+                    <h4 id="print-quiz-title" class="font-bold text-slate-800 text-sm"></h4>
+                    <p id="print-quiz-meta" class="text-[11px] text-slate-500"></p>
+                </div>
+
+                <!-- Pengaturan Ukuran Kertas: A4 atau F4 -->
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
+                        <i class="fa-solid fa-file text-brand-600 text-xs"></i> Pengaturan Ukuran Kertas:
+                    </label>
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <label class="relative flex items-center p-2.5 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50/50 has-[:checked]:ring-1 has-[:checked]:ring-brand-600">
+                            <input type="radio" name="print-paper-size" value="A4" checked class="text-brand-600 focus:ring-brand-500">
+                            <div class="ml-2.5">
+                                <span class="font-bold text-slate-800 block text-xs">A4</span>
+                                <span class="text-[10px] text-slate-500">210 x 297 mm</span>
+                            </div>
+                        </label>
+                        <label class="relative flex items-center p-2.5 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50 transition has-[:checked]:border-brand-600 has-[:checked]:bg-brand-50/50 has-[:checked]:ring-1 has-[:checked]:ring-brand-600">
+                            <input type="radio" name="print-paper-size" value="F4" class="text-brand-600 focus:ring-brand-500">
+                            <div class="ml-2.5">
+                                <span class="font-bold text-slate-800 block text-xs">F4 (Folio)</span>
+                                <span class="text-[10px] text-slate-500">215 x 330 mm</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Info Spesifikasi Print Sesuai Permintaan -->
+                <div class="p-3 bg-amber-50/80 border border-amber-200/80 rounded-xl space-y-1.5 text-[11px] text-amber-900">
+                    <div class="font-bold flex items-center gap-1.5 text-amber-950">
+                        <i class="fa-solid fa-sliders text-amber-600"></i> Format Standar Dokumen Siap Print:
+                    </div>
+                    <ul class="list-disc list-inside space-y-0.5 text-amber-800 text-[11px] pl-1">
+                        <li><b>Margin Halaman:</b> 1 cm (ringkas & hemat lembar cetak)</li>
+                        <li><b>Ukuran Font:</b> 12 pt (jelas & standar resmi naskah soal)</li>
+                        <li><b>Pilihan Ganda:</b> Otomatis mendatar (A B C D), 2x2 jika sedang, atau kebawah jika teks panjang</li>
+                        <li><b>Kunci Jawaban:</b> Tersedia di halaman terakhir</li>
+                    </ul>
+                </div>
+
+                <!-- Opsi Kunci Jawaban -->
+                <div class="pt-1">
+                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                        <input type="checkbox" id="print-include-answer-key" checked class="w-4 h-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                        <span class="font-semibold text-slate-700 text-xs">Sertakan Kunci Jawaban & Pembahasan di Halaman Terakhir</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Tombol Aksi Download -->
+            <div class="pt-3 border-t flex flex-col sm:flex-row items-center gap-2 justify-end">
+                <button type="button" onclick="closePrintModal()" class="w-full sm:w-auto px-4 py-2 border border-slate-300 text-slate-600 hover:bg-slate-50 rounded-xl font-semibold text-xs transition">Batal</button>
+                <button type="button" onclick="executeDownloadWord()" class="w-full sm:w-auto btn-compact py-2 px-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 rounded-xl shadow-xs transition" title="Unduh berkas Word (.doc) siap edit dan print">
+                    <i class="fa-solid fa-file-word"></i> <span>Download Word (.doc)</span>
+                </button>
+                <button type="button" onclick="executePrintPdf()" class="w-full sm:w-auto btn-compact py-2 px-3.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 rounded-xl shadow-xs transition" title="Cetak langsung atau simpan sebagai PDF">
+                    <i class="fa-solid fa-file-pdf"></i> <span>Cetak / PDF</span>
+                </button>
             </div>
         </div>
     </div>
@@ -593,6 +677,11 @@
                         <div class="pt-1 flex items-center justify-between gap-1.5">
                             <button type="button" onclick="openQuestionManager('${q.id}')" class="flex-1 btn-compact py-2 bg-white hover:bg-slate-50 ${theme.btnText} border border-white/80 rounded-xl flex items-center justify-center gap-1.5 font-bold transition text-xs shadow-2xs">
                                 <i class="fa-solid fa-list-check text-xs"></i> <span>Kelola Soal (${qCount})</span>
+                            </button>
+                            <button type="button" onclick="openPrintModal('${q.id}')" class="p-2 w-[36px] h-[36px] bg-white text-slate-600 hover:text-brand-600 hover:bg-slate-50 rounded-xl border border-slate-200 transition" title="Cetak / Download Soal (PDF & Word)">
+                                <span class="flex items-center justify-center">
+                                    <i class="fa-solid fa-print text-xs"></i>
+                                </span>
                             </button>
                             <button type="button" onclick="openQuizModal('${q.id}')" class="p-2 w-[36px] h-[36px] bg-white text-slate-600 hover:text-brand-600 hover:bg-slate-50 rounded-xl border border-slate-200 transition" title="Edit Paket Kuis">
                                 <span class="flex items-center justify-center">
@@ -927,10 +1016,15 @@
                         <div id="qm-questions-list" class="max-h-80 overflow-y-auto space-y-2 custom-scrollbar">
                             ${buildQuestionsListHtml(quiz)}
                         </div>
-                        <div class="pt-2 flex justify-between items-center border-t">
-                            <button type="button" onclick="openQuestionModal('${quiz.id}')" class="btn-compact bg-brand-600 hover:bg-brand-700 text-white font-bold flex items-center gap-1.5 shadow-xs">
-                                <i class="fa-solid fa-plus text-xs"></i> <span>Tambah Soal</span>
-                            </button>
+                        <div class="pt-2 flex justify-between items-center border-t gap-2 flex-wrap">
+                            <div class="flex items-center gap-2">
+                                <button type="button" onclick="openQuestionModal('${quiz.id}')" class="btn-compact bg-brand-600 hover:bg-brand-700 text-white font-bold flex items-center gap-1.5 shadow-xs">
+                                    <i class="fa-solid fa-plus text-xs"></i> <span>Tambah Soal</span>
+                                </button>
+                                <button type="button" onclick="openPrintModal('${quiz.id}')" class="btn-compact bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold flex items-center gap-1.5 shadow-2xs" title="Cetak atau Download Soal (PDF & Word)">
+                                    <i class="fa-solid fa-print text-xs text-blue-600"></i> <span>Cetak / Download</span>
+                                </button>
+                            </div>
                             <button type="button" onclick="document.getElementById('qm-dialog').remove()" class="btn-compact border border-slate-300 text-slate-600 hover:bg-slate-50">Selesai</button>
                         </div>
                     </div>
@@ -1414,23 +1508,6 @@
         }
 
         // Templates Download
-        function downloadExcelTemplate() {
-            const templateData = [
-                ["tipe", "pertanyaan", "teks_kasus", "pernyataan", "alasan", "opsi_a", "opsi_b", "opsi_c", "opsi_d", "opsi_e", "kunci_jawaban", "pasangan_menjodohkan", "pembahasan"],
-                ["mc", "Komponen komputer manakah yang berfungsi sebagai penyimpan data komputasi sementara saat sistem menyala?", "", "", "", "RAM (Random Access Memory)", "Harddisk / SSD", "Power Supply Unit", "Kartu Grafis (GPU)", "", "A", "", "RAM menyimpan instruksi dan data komputasi yang sedang aktif dijalankan sistem."],
-                ["complex", "Manakah yang tergolong perangkat masukan (input device)? (Pilih beberapa)", "", "", "", "Keyboard", "Monitor Layar", "Mouse Optik", "Speaker", "Scanner Dokumen", "A,C,E", "", "Keyboard, Mouse, dan Scanner merupakan perangkat masukan data pengguna."],
-                ["cause_effect", "Tentukan kebenaran pernyataan, alasan, dan keterkaitan sebab-akibat berikut:", "", "Peningkatan emisi gas rumah kaca dapat mempercepat pemanasan global.", "Gas rumah kaca seperti karbon dioksida memerangkap radiasi panas matahari di atmosfer bumi.", "", "", "", "", "", "A", "", "Pernyataan BENAR, Alasan BENAR, dan keduanya menunjukkan hubungan sebab akibat."],
-                ["case_analysis", "Berdasarkan studi kasus di atas, apa tindakan mitigasi awal yang paling tepat untuk menormalkan sistem?", "Sebuah laboratorium komputer sekolah mengalami gangguan jaringan lokal (LAN) saat pelaksanaan ujian berlangsung akibat adanya indikasi broadcast storm dari port salah satu switch.", "", "", "Merestart server ujian secara tiba-tiba tanpa backup", "Mengisolasi segmen kabel atau port switch yang bermasalah untuk memutus loop", "Mengganti seluruh kabel jaringan di laboratorium sekaligus", "Mematikan sambungan listrik utama laboratorium", "", "B", "", "Mengisolasi port/segmen bermasalah langsung memutus broadcast storm tanpa mematikan server utama."],
-                ["matching", "Jodohkan perangkat keras komputer berikut dengan fungsinya yang sesuai:", "", "", "", "", "", "", "", "", "0=0, 1=1, 2=2, 3=3", "Monitor=Menampilkan visual antarmuka|Keyboard=Memasukkan data teks dan perintah|SSD=Menyimpan berkas secara permanen|CPU=Memproses instruksi komputasi", "Pasangkan perangkat keras sesuai fungsi utamanya."],
-                ["essay", "Jelaskan perbedaan mendasar antara memori utama (RAM) dan penyimpanan sekunder (SSD/Harddisk) pada sistem komputer!", "", "", "", "", "", "", "", "", "RAM bersifat volatile (data hilang saat listrik padam) untuk pemrosesan sementara yang cepat, sedangkan SSD/Harddisk bersifat non-volatile untuk menyimpan berkas secara permanen.", "", "Rubrik: Poin 1 sifat volatile vs non-volatile, Poin 2 fungsi dan kecepatan operasional komputer."]
-            ];
-
-            const ws = XLSX.utils.aoa_to_sheet(templateData);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Template_Soal_ExamLAN");
-            XLSX.writeFile(wb, "Template_Import_Soal_Lengkap.xlsx");
-        }
-
         function downloadWordTextTemplate() {
             const wordTemplate = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
 <head>
@@ -1528,6 +1605,548 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+        }
+
+        // ================= CETAK / DOWNLOAD NASKAH SOAL (PDF & WORD) =================
+        function openPrintModal(quizId) {
+            const quiz = allQuizzes.find(q => q.id === quizId);
+            if (!quiz) {
+                appAlert('Paket kuis tidak ditemukan.');
+                return;
+            }
+            const qCount = (quiz.questions || []).length;
+            if (qCount === 0) {
+                appAlert('Paket kuis ini belum memiliki butir soal untuk dicetak / didownload.', 'Peringatan');
+                return;
+            }
+            document.getElementById('print-target-quiz-id').value = quizId;
+            document.getElementById('print-quiz-title').innerText = quiz.title || 'Naskah Soal Ujian';
+            document.getElementById('print-quiz-meta').innerText = `${qCount} butir soal | Kelas: ${quiz.class || 'Semua Kelas'} | Waktu: ${quiz.duration || 60} Menit`;
+            toggleModal('modal-print-quiz', true);
+        }
+
+        function closePrintModal() {
+            toggleModal('modal-print-quiz', false);
+        }
+
+        function getSelectedPaperSize() {
+            const radios = document.getElementsByName('print-paper-size');
+            for (const r of radios) {
+                if (r.checked) return r.value;
+            }
+            return 'A4';
+        }
+
+        async function executePrintPdf() {
+            const quizId = document.getElementById('print-target-quiz-id').value;
+            const paperSize = getSelectedPaperSize();
+            const includeKey = document.getElementById('print-include-answer-key').checked;
+            await printQuizPdf(quizId, paperSize, includeKey);
+        }
+
+        async function executeDownloadWord() {
+            const quizId = document.getElementById('print-target-quiz-id').value;
+            const paperSize = getSelectedPaperSize();
+            const includeKey = document.getElementById('print-include-answer-key').checked;
+            await downloadQuizWord(quizId, paperSize, includeKey);
+        }
+
+        function formatPrintOptions(options) {
+            if (!Array.isArray(options) || !options.length) return '';
+
+            const cleanOptions = options.map((opt, i) => ({
+                letter: String.fromCharCode(65 + i),
+                text: String(opt || '').trim()
+            })).filter(o => o.text !== '');
+
+            if (!cleanOptions.length) return '';
+
+            const maxLen = Math.max(...cleanOptions.map(o => o.text.length));
+            const totalLen = cleanOptions.reduce((acc, o) => acc + o.text.length, 0);
+
+            // Kasus 1: Mendatar 4 (atau 5) sejajar jika teks pendek (maxLen <= 22 dan totalLen <= 75)
+            if (cleanOptions.length <= 5 && maxLen <= 22 && totalLen <= 75) {
+                const widthPct = Math.floor(100 / cleanOptions.length);
+                let cells = cleanOptions.map(o => `
+                    <td style="width: ${widthPct}%; border: none; vertical-align: top; padding: 1px 4px 3px 0; font-size: 12pt; font-family: 'Times New Roman', serif;">
+                        <b>${o.letter}.</b> ${escapeHtml(o.text)}
+                    </td>
+                `).join('');
+                return `
+                    <table style="width: 100%; border: none; border-collapse: collapse; margin: 3px 0 5px 0;" cellpadding="0" cellspacing="0">
+                        <tr>${cells}</tr>
+                    </table>
+                `;
+            }
+
+            // Kasus 2: 2 kebawah 2 mendatar jika sedang (maxLen <= 48 dan totalLen <= 170)
+            if (maxLen <= 48 && totalLen <= 170) {
+                let rowsHtml = '';
+                for (let i = 0; i < cleanOptions.length; i += 2) {
+                    const opt1 = cleanOptions[i];
+                    const opt2 = cleanOptions[i + 1];
+                    rowsHtml += `
+                        <tr>
+                            <td style="width: 50%; border: none; vertical-align: top; padding: 1px 8px 3px 0; font-size: 12pt; font-family: 'Times New Roman', serif;">
+                                <b>${opt1.letter}.</b> ${escapeHtml(opt1.text)}
+                            </td>
+                            <td style="width: 50%; border: none; vertical-align: top; padding: 1px 0 3px 8px; font-size: 12pt; font-family: 'Times New Roman', serif;">
+                                ${opt2 ? `<b>${opt2.letter}.</b> ${escapeHtml(opt2.text)}` : ''}
+                            </td>
+                        </tr>
+                    `;
+                }
+                return `
+                    <table style="width: 100%; border: none; border-collapse: collapse; margin: 3px 0 5px 0;" cellpadding="0" cellspacing="0">
+                        ${rowsHtml}
+                    </table>
+                `;
+            }
+
+            // Kasus 3: Kebawah (Vertikal) jika panjang
+            return `
+                <div style="margin: 3px 0 6px 0;">
+                    ${cleanOptions.map(o => `
+                        <div style="margin-bottom: 2px; font-size: 12pt; font-family: 'Times New Roman', serif; line-height: 1.3;">
+                            <b>${o.letter}.</b> ${escapeHtml(o.text)}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function generateQuizPrintableHtml(quiz, paperSize, includeAnswerKey, format) {
+            const questions = quiz.questions || [];
+
+            // Header Kop Soal
+            const headerHtml = `
+                <div style="border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 12px; text-align: center;">
+                    <h2 style="font-size: 14pt; font-weight: bold; margin: 0; text-transform: uppercase;">NASKAH SOAL UJIAN</h2>
+                    <h3 style="font-size: 12.5pt; font-weight: bold; margin: 2px 0 0 0;">${escapeHtml(quiz.title || '')}</h3>
+                    <table style="width: 100%; border: none; margin-top: 6px; font-size: 10.5pt; font-family: 'Times New Roman', serif;" cellpadding="0" cellspacing="0">
+                        <tr>
+                            <td style="width: 50%; border: none; text-align: left; padding: 1px 0;"><b>Mata Pelajaran:</b> ${escapeHtml(quiz.title || '-')}</td>
+                            <td style="width: 50%; border: none; text-align: right; padding: 1px 0;"><b>Kelas / Tingkat:</b> ${quiz.class ? escapeHtml(quiz.class) : 'Semua Kelas'}</td>
+                        </tr>
+                        <tr>
+                            <td style="width: 50%; border: none; text-align: left; padding: 1px 0;"><b>Waktu / Durasi:</b> ${quiz.duration || 60} Menit</td>
+                            <td style="width: 50%; border: none; text-align: right; padding: 1px 0;"><b>Banyak Soal:</b> ${questions.length} Butir</td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="font-size: 10.5pt; margin-bottom: 12px; font-style: italic; border-bottom: 1px dashed #94a3b8; padding-bottom: 4px;">
+                    <b>Petunjuk:</b> Pilihlah atau jawablah pertanyaan-pertanyaan di bawah ini dengan tepat dan jelas!
+                </div>
+            `;
+
+            // Questions List
+            let questionsHtml = '';
+            questions.forEach((q, idx) => {
+                const qNo = idx + 1;
+                const qType = q.type || 'mc';
+                let qBody = '';
+
+                if (q.case_text || q.case_passage) {
+                    qBody += `
+                        <div style="background-color: #f8fafc; border-left: 3px solid #64748b; padding: 6px 10px; margin: 4px 0 6px 0; font-size: 11pt; font-style: italic; line-height: 1.35;">
+                            <b>Studi Kasus:</b><br>${escapeHtml(q.case_text || q.case_passage)}
+                        </div>
+                    `;
+                }
+
+                const qText = q.question || (qType === 'cause_effect' ? 'Perhatikan pernyataan dan alasan di bawah ini:' : '');
+                if (qText) {
+                    qBody += `<div style="line-height: 1.35; margin-bottom: 4px;">${escapeHtml(qText)}</div>`;
+                }
+
+                if (q.image) {
+                    let imgSrc = q.image;
+                    if (!imgSrc.startsWith('http') && !imgSrc.startsWith('data:')) {
+                        imgSrc = window.location.origin + (APP_ROOT || '/') + String(imgSrc).replace(/^[\\\/]+/, '');
+                    }
+                    const dims = q._targetDims || calcPrintImageDims(280, 160);
+                    qBody += `
+                        <div style="margin: 4px 0 6px 0;">
+                            <img src="${imgSrc}" width="${dims.width}" height="${dims.height}" style="width: ${dims.width}px; height: ${dims.height}px; max-width: 100%; border: 1px solid #cbd5e1; padding: 2px; border-radius: 4px; display: block;" alt="Gambar Soal ${qNo}">
+                        </div>
+                    `;
+                }
+
+                if (qType === 'mc') {
+                    qBody += formatPrintOptions(q.options || []);
+                } else if (qType === 'complex') {
+                    qBody += `<div style="font-size: 10pt; color: #475569; font-style: italic; margin-bottom: 3px;">(Pilihan Ganda Kompleks - Pilihlah beberapa jawaban yang benar)</div>`;
+                    qBody += formatPrintOptions(q.options || []);
+                } else if (qType === 'cause_effect') {
+                    qBody += `
+                        <div style="margin: 4px 0 6px 10px; font-size: 11.5pt; line-height: 1.35;">
+                            <p style="margin: 2px 0;"><b>Pernyataan:</b> ${escapeHtml(q.statement || '-')}</p>
+                            <p style="margin: 2px 0;"><b>Alasan:</b> ${escapeHtml(q.reason || '-')}</p>
+                        </div>
+                    `;
+                    const ceOptions = [
+                        'Pernyataan benar, alasan benar, dan keduanya menunjukkan hubungan sebab-akibat.',
+                        'Pernyataan benar, alasan benar, tetapi keduanya tidak menunjukkan hubungan sebab-akibat.',
+                        'Pernyataan benar dan alasan salah.',
+                        'Pernyataan salah dan alasan benar.',
+                        'Pernyataan dan alasan keduanya salah.'
+                    ];
+                    qBody += formatPrintOptions(ceOptions);
+                } else if (qType === 'case_analysis') {
+                    qBody += formatPrintOptions(q.options || []);
+                } else if (qType === 'matching') {
+                    const premises = q.premises || [];
+                    const targets = q.targets || [];
+                    const maxRows = Math.max(premises.length, targets.length);
+                    let matchRows = '';
+                    for (let m = 0; m < maxRows; m++) {
+                        const pVal = premises[m] !== undefined ? `${m + 1}. ${escapeHtml(premises[m])}` : '';
+                        const tVal = targets[m] !== undefined ? `${String.fromCharCode(65 + m)}. ${escapeHtml(targets[m])}` : '';
+                        matchRows += `
+                            <tr>
+                                <td style="width: 50%; border: 1px solid #cbd5e1; padding: 4px 8px; vertical-align: top; font-size: 11pt;">${pVal}</td>
+                                <td style="width: 50%; border: 1px solid #cbd5e1; padding: 4px 8px; vertical-align: top; font-size: 11pt;">${tVal}</td>
+                            </tr>
+                        `;
+                    }
+                    qBody += `
+                        <div style="margin: 4px 0 8px 0;">
+                            <p style="font-size: 10.5pt; font-style: italic; margin-bottom: 3px;">Jodohkan pernyataan di kolom kiri dengan pilihan yang tepat di kolom kanan:</p>
+                            <table style="width: 100%; border-collapse: collapse; font-family: 'Times New Roman', serif;" border="1" cellpadding="4" cellspacing="0">
+                                <thead>
+                                    <tr style="background-color: #f1f5f9;">
+                                        <th style="width: 50%; border: 1px solid #cbd5e1; text-align: left; padding: 4px 8px; font-size: 11pt;">Kolom Pertanyaan / Premis</th>
+                                        <th style="width: 50%; border: 1px solid #cbd5e1; text-align: left; padding: 4px 8px; font-size: 11pt;">Pilihan Jawaban</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${matchRows}</tbody>
+                            </table>
+                        </div>
+                    `;
+                } else if (qType === 'short_answer') {
+                    qBody += `
+                        <div style="margin: 6px 0 8px 0; font-size: 11.5pt;">
+                            <b>Jawaban:</b> ................................................................................................................................
+                        </div>
+                    `;
+                } else if (qType === 'essay') {
+                    qBody += `
+                        <div style="margin: 6px 0 10px 0; border: 1px dashed #cbd5e1; min-height: 70px; padding: 8px; font-size: 10pt; color: #94a3b8; font-style: italic;">
+                            (Ruang Jawaban Esai / Uraian)
+                        </div>
+                    `;
+                }
+
+                questionsHtml += `
+                    <div style="margin-bottom: 12px; page-break-inside: avoid;">
+                        <table style="width: 100%; border: none; border-collapse: collapse;" cellpadding="0" cellspacing="0">
+                            <tr>
+                                <td style="width: 24px; vertical-align: top; font-weight: bold; border: none; font-size: 12pt; padding: 0;">${qNo}.</td>
+                                <td style="vertical-align: top; border: none; font-size: 12pt; padding: 0;">
+                                    ${qBody}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                `;
+            });
+
+            // Kunci Jawaban di Halaman Terakhir
+            let answerKeyHtml = '';
+            if (includeAnswerKey) {
+                let keyRows = '';
+                questions.forEach((q, idx) => {
+                    const qNo = idx + 1;
+                    const qType = q.type || 'mc';
+                    let typeName = 'Pilihan Ganda';
+                    let keyText = '-';
+
+                    if (qType === 'mc') {
+                        typeName = 'Pilihan Ganda';
+                        const ansIdx = typeof q.answer === 'number' ? q.answer : parseInt(q.answer, 10);
+                        if (!isNaN(ansIdx) && q.options && q.options[ansIdx] !== undefined) {
+                            keyText = `<b>${String.fromCharCode(65 + ansIdx)}</b> (${escapeHtml(q.options[ansIdx])})`;
+                        } else if (typeof q.answer === 'string' && q.answer.trim()) {
+                            keyText = `<b>${escapeHtml(q.answer.trim())}</b>`;
+                        }
+                    } else if (qType === 'complex') {
+                        typeName = 'Pilihan Ganda Kompleks';
+                        let ansArr = Array.isArray(q.answers) ? q.answers : (q.answer ? [q.answer] : []);
+                        let letters = ansArr.map(a => {
+                            const i = typeof a === 'number' ? a : parseInt(a, 10);
+                            return !isNaN(i) ? String.fromCharCode(65 + i) : a;
+                        });
+                        keyText = `<b>${escapeHtml(letters.join(', '))}</b>`;
+                    } else if (qType === 'cause_effect') {
+                        typeName = 'Sebab Akibat';
+                        const ceMap = {
+                            'both_correct_connected': 'A (Pernyataan & Alasan Benar berhubungan)',
+                            'both_correct_not_connected': 'B (Pernyataan & Alasan Benar tidak berhubungan)',
+                            'statement_true_reason_false': 'C (Pernyataan Benar, Alasan Salah)',
+                            'statement_false_reason_true': 'D (Pernyataan Salah, Alasan Benar)',
+                            'both_false': 'E (Keduanya Salah)'
+                        };
+                        keyText = `<b>${escapeHtml(ceMap[q.answer] || q.answer || '-')}</b>`;
+                    } else if (qType === 'case_analysis') {
+                        typeName = 'Analisis Kasus';
+                        const ansIdx = typeof q.answer === 'number' ? q.answer : parseInt(q.answer, 10);
+                        if (!isNaN(ansIdx) && q.options && q.options[ansIdx] !== undefined) {
+                            keyText = `<b>${String.fromCharCode(65 + ansIdx)}</b> (${escapeHtml(q.options[ansIdx])})`;
+                        } else {
+                            keyText = `<b>${escapeHtml(String(q.answer || '-'))}</b>`;
+                        }
+                    } else if (qType === 'matching') {
+                        typeName = 'Menjodohkan';
+                        const premises = q.premises || [];
+                        const targets = q.targets || [];
+                        let pairsArr = [];
+                        premises.forEach((p, pIdx) => {
+                            const t = targets[pIdx] || '';
+                            pairsArr.push(`${pIdx + 1} &rarr; ${escapeHtml(t)}`);
+                        });
+                        keyText = pairsArr.join('<br>');
+                    } else if (qType === 'short_answer') {
+                        typeName = 'Isian Singkat';
+                        keyText = `<b>${escapeHtml(q.answer || '-')}</b>`;
+                    } else if (qType === 'essay') {
+                        typeName = 'Uraian / Esai';
+                        keyText = `<span style="font-size: 10pt; color: #334155;">${escapeHtml(q.answer || q.explanation || 'Sesuai rubrik penskoran guru')}</span>`;
+                    }
+
+                    const explText = q.explanation ? escapeHtml(q.explanation) : '-';
+
+                    keyRows += `
+                        <tr>
+                            <td style="text-align: center; font-weight: bold; border: 1px solid #475569; padding: 4px; font-size: 10.5pt; vertical-align: top;">${qNo}</td>
+                            <td style="text-align: center; border: 1px solid #475569; padding: 4px; font-size: 10.5pt; vertical-align: top;">${typeName}</td>
+                            <td style="border: 1px solid #475569; padding: 4px 6px; font-size: 10.5pt; vertical-align: top;">${keyText}</td>
+                            <td style="border: 1px solid #475569; padding: 4px 6px; font-size: 10.5pt; vertical-align: top; color: #334155;">${explText}</td>
+                        </tr>
+                    `;
+                });
+
+                const pageBreaker = format === 'word'
+                    ? '<br clear="all" style="page-break-before: always; mso-break-type: page-break;" />'
+                    : '<div style="page-break-before: always; break-before: page;"></div>';
+
+                answerKeyHtml = `
+                    ${pageBreaker}
+                    <div style="clear: both; padding-top: 10px;">
+                        <div style="border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 12px; text-align: center;">
+                            <h3 style="font-size: 13pt; font-weight: bold; margin: 0; text-transform: uppercase;">KUNCI JAWABAN & PEMBAHASAN</h3>
+                            <p style="font-size: 11pt; margin: 3px 0 0 0;"><b>Paket Soal:</b> ${escapeHtml(quiz.title)} &nbsp;|&nbsp; <b>Kelas:</b> ${quiz.class ? escapeHtml(quiz.class) : 'Semua'} &nbsp;|&nbsp; <b>Total Soal:</b> ${questions.length} Butir</p>
+                        </div>
+                        <table style="width: 100%; border-collapse: collapse; font-family: 'Times New Roman', serif; margin-top: 8px;" border="1" cellpadding="4" cellspacing="0">
+                            <thead>
+                                <tr style="background-color: #e2e8f0;">
+                                    <th style="width: 6%; text-align: center; border: 1px solid #475569; padding: 5px; font-size: 10.5pt;">No</th>
+                                    <th style="width: 18%; text-align: center; border: 1px solid #475569; padding: 5px; font-size: 10.5pt;">Bentuk Soal</th>
+                                    <th style="width: 32%; text-align: left; border: 1px solid #475569; padding: 5px 6px; font-size: 10.5pt;">Kunci Jawaban</th>
+                                    <th style="width: 44%; text-align: left; border: 1px solid #475569; padding: 5px 6px; font-size: 10.5pt;">Pembahasan / Keterangan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${keyRows}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            if (format === 'word') {
+                return `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<title>${escapeHtml(quiz.title || 'Naskah_Soal')}</title>
+<!--[if gte mso 9]>
+<xml>
+<w:WordDocument>
+<w:View>Print</w:View>
+<w:Zoom>100</w:Zoom>
+<w:DoNotOptimizeForBrowser/>
+</w:WordDocument>
+</xml>
+<![endif]-->
+<style>
+@page Section1 {
+    size: ${paperSize === 'F4' ? '21.5cm 33.0cm' : '21.0cm 29.7cm'};
+    margin: 1.0cm 1.0cm 1.0cm 1.0cm;
+    mso-header-margin: 0.5cm;
+    mso-footer-margin: 0.5cm;
+    mso-paper-source: 0;
+}
+div.Section1 { page: Section1; }
+body {
+    font-family: 'Times New Roman', serif;
+    font-size: 12.0pt;
+    line-height: 1.35;
+    color: #000;
+}
+table { border-collapse: collapse; }
+td, th { font-family: 'Times New Roman', serif; }
+</style>
+</head>
+<body>
+<div class="Section1">
+${headerHtml}
+${questionsHtml}
+${answerKeyHtml}
+</div>
+</body>
+</html>`;
+            } else {
+                return `<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>${escapeHtml(quiz.title || 'Naskah_Soal')} - Siap Print</title>
+<style>
+@page {
+    size: ${paperSize === 'F4' ? '215mm 330mm' : '210mm 297mm'};
+    margin: 10mm;
+}
+@media print {
+    body {
+        margin: 0;
+        padding: 0;
+    }
+    .no-print {
+        display: none !important;
+    }
+}
+body {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 12pt;
+    line-height: 1.35;
+    color: #000;
+    background: #fff;
+    margin: 0 auto;
+    padding: 10mm;
+    max-width: ${paperSize === 'F4' ? '215mm' : '210mm'};
+    box-sizing: border-box;
+}
+table { border-collapse: collapse; }
+td, th { font-family: 'Times New Roman', Times, serif; }
+.btn-print-floating {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #2563eb;
+    color: #ffffff;
+    padding: 12px 20px;
+    border-radius: 12px;
+    border: none;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 9999;
+    font-family: sans-serif;
+}
+.btn-print-floating:hover { background: #1d4ed8; }
+</style>
+</head>
+<body>
+<button type="button" onclick="window.print()" class="btn-print-floating no-print">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+    Cetak / Simpan PDF
+</button>
+${headerHtml}
+${questionsHtml}
+${answerKeyHtml}
+</body>
+</html>`;
+            }
+        }
+
+        function calcPrintImageDims(origW, origH) {
+            const MAX_W = 280;
+            const MAX_H = 170;
+            const MIN_W = 160;
+            const MIN_H = 80;
+
+            let w = origW || 280;
+            let h = origH || 160;
+
+            if (w > MAX_W || h > MAX_H) {
+                const scale = Math.min(MAX_W / w, MAX_H / h);
+                w = Math.round(w * scale);
+                h = Math.round(h * scale);
+            } else if (w < MIN_W && h < MIN_H) {
+                const scale = Math.min(MIN_W / w, MIN_H / h);
+                w = Math.round(w * scale);
+                h = Math.round(h * scale);
+            }
+            return { width: Math.max(w, 40), height: Math.max(h, 30) };
+        }
+
+        function preloadQuizImages(questions) {
+            const promises = (questions || []).map(q => {
+                if (!q || !q.image) return Promise.resolve(null);
+                return new Promise(resolve => {
+                    let imgSrc = q.image;
+                    if (!imgSrc.startsWith('http') && !imgSrc.startsWith('data:')) {
+                        imgSrc = window.location.origin + (APP_ROOT || '/') + String(imgSrc).replace(/^[\\\/]+/, '');
+                    }
+                    const img = new Image();
+                    img.onload = () => {
+                        const nw = img.naturalWidth || 280;
+                        const nh = img.naturalHeight || 160;
+                        q._targetDims = calcPrintImageDims(nw, nh);
+                        resolve();
+                    };
+                    img.onerror = () => {
+                        q._targetDims = { width: 280, height: 160 };
+                        resolve();
+                    };
+                    setTimeout(() => {
+                        if (!q._targetDims) q._targetDims = { width: 280, height: 160 };
+                        resolve();
+                    }, 1500);
+                    img.src = imgSrc;
+                });
+            });
+            return Promise.all(promises);
+        }
+
+        async function printQuizPdf(quizId, paperSize, includeAnswerKey) {
+            const quiz = allQuizzes.find(q => q.id === quizId);
+            if (!quiz) return;
+            await preloadQuizImages(quiz.questions || []);
+            const printHtml = generateQuizPrintableHtml(quiz, paperSize, includeAnswerKey, 'pdf');
+            const printWindow = window.open('', '_blank', 'width=920,height=780');
+            if (!printWindow) {
+                appAlert('Pop-up terblokir oleh browser. Izinkan pop-up untuk mencetak / download PDF.', 'Peringatan');
+                return;
+            }
+            printWindow.document.open();
+            printWindow.document.write(printHtml);
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(function() {
+                try {
+                    printWindow.print();
+                } catch(e) {}
+            }, 600);
+        }
+
+        async function downloadQuizWord(quizId, paperSize, includeAnswerKey) {
+            const quiz = allQuizzes.find(q => q.id === quizId);
+            if (!quiz) return;
+            await preloadQuizImages(quiz.questions || []);
+            const wordHtml = generateQuizPrintableHtml(quiz, paperSize, includeAnswerKey, 'word');
+            const blob = new Blob(['\ufeff' + wordHtml], { type: 'application/msword;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            const cleanTitle = (quiz.title || 'Soal_Ujian').replace(/[^a-zA-Z0-9_\-]/g, '_');
+            link.download = `Naskah_Soal_${cleanTitle}_${paperSize}.doc`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
         }
     </script>
 </body>

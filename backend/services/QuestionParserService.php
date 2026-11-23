@@ -454,9 +454,7 @@ class QuestionParserService {
         @$shDom->loadXML($sheetXml);
         $rows = $shDom->getElementsByTagName('row');
 
-        $headerMap = [];
-        $blocks = [];
-
+        $allRows = [];
         foreach ($rows as $rowEl) {
             $rowNum = (int)$rowEl->getAttribute('r');
             $cCells = $rowEl->getElementsByTagName('c');
@@ -481,47 +479,182 @@ class QuestionParserService {
                 }
                 $rowData[$colLetter] = trim($val);
             }
+            if (!empty($rowData)) {
+                $allRows[$rowNum] = $rowData;
+            }
+        }
 
-            if ($rowNum === 1) {
-                foreach ($rowData as $col => $name) {
-                    $cleanName = strtolower(preg_replace('/[^a-zA-Z0-9_]/', '', $name));
-                    $headerMap[$col] = $cleanName;
+        $blocks = [];
+        $firstRow = reset($allRows) ?: [];
+        $firstA = strtolower(preg_replace('/[^a-z]/', '', $firstRow['A'] ?? ''));
+        $firstB = strtolower(preg_replace('/[^a-z]/', '', $firstRow['B'] ?? ''));
+        $isHorizontal = ($firstA === 'tipe' || $firstA === 'type') && ($firstB === 'pertanyaan' || $firstB === 'question');
+
+        if ($isHorizontal) {
+            // === LOGIKA HORIZONTAL (FORMAT LAMA - UNTUK KOMPATIBILITAS FILE SEBELUMNYA) ===
+            $headerMap = [];
+            foreach ($allRows as $rowNum => $rowData) {
+                if ($rowNum === 1 || empty($headerMap)) {
+                    foreach ($rowData as $col => $name) {
+                        $cleanName = strtolower(preg_replace('/[^a-zA-Z0-9_]/', '', $name));
+                        $headerMap[$col] = $cleanName;
+                    }
+                } else {
+                    $namedRow = [];
+                    foreach ($rowData as $col => $v) {
+                        $k = $headerMap[$col] ?? $col;
+                        $namedRow[$k] = $v;
+                    }
+
+                    $img = $rowImages[$rowNum] ?? ($namedRow['gambar'] ?? '');
+
+                    $lines = [];
+                    $typeVal = $namedRow['tipe'] ?? ($namedRow['type'] ?? 'mc');
+                    if (empty($typeVal) && empty($namedRow['pertanyaan'])) continue;
+
+                    $lines[] = 'TIPE: ' . ($typeVal ?: 'mc');
+                    if (!empty($namedRow['pertanyaan'])) $lines[] = 'PERTANYAAN: ' . $namedRow['pertanyaan'];
+                    $caseVal = $namedRow['teks_kasus'] ?? ($namedRow['kasus'] ?? ($namedRow['bacaan'] ?? ''));
+                    if (!empty($caseVal)) $lines[] = 'KASUS: ' . $caseVal;
+                    $stmtVal = $namedRow['pernyataan'] ?? ($namedRow['statement'] ?? '');
+                    if (!empty($stmtVal)) $lines[] = 'PERNYATAAN: ' . $stmtVal;
+                    $reasonVal = $namedRow['alasan'] ?? ($namedRow['reason'] ?? '');
+                    if (!empty($reasonVal)) $lines[] = 'ALASAN: ' . $reasonVal;
+                    if (!empty($namedRow['opsi_a'])) $lines[] = 'A: ' . $namedRow['opsi_a'];
+                    if (!empty($namedRow['opsi_b'])) $lines[] = 'B: ' . $namedRow['opsi_b'];
+                    if (!empty($namedRow['opsi_c'])) $lines[] = 'C: ' . $namedRow['opsi_c'];
+                    if (!empty($namedRow['opsi_d'])) $lines[] = 'D: ' . $namedRow['opsi_d'];
+                    if (!empty($namedRow['opsi_e'])) $lines[] = 'E: ' . $namedRow['opsi_e'];
+                    $matchVal = $namedRow['pasangan_menjodohkan'] ?? ($namedRow['jodohkan'] ?? ($namedRow['pasangan'] ?? ''));
+                    if (!empty($matchVal)) {
+                        $lines[] = 'PASANGAN: ' . $matchVal;
+                    }
+                    $keyVal = $namedRow['kunci_jawaban'] ?? ($namedRow['kunci'] ?? ($namedRow['jawaban'] ?? ($namedRow['rubrik'] ?? ($namedRow['pedoman'] ?? ''))));
+                    if (!empty($keyVal)) $lines[] = 'KUNCI: ' . $keyVal;
+                    if (!empty($namedRow['pembahasan'])) $lines[] = 'PEMBAHASAN: ' . $namedRow['pembahasan'];
+
+                    $blocks[] = ['lines' => $lines, 'image' => $img];
                 }
-            } else {
-                $namedRow = [];
-                foreach ($rowData as $col => $v) {
-                    $k = $headerMap[$col] ?? $col;
-                    $namedRow[$k] = $v;
+            }
+        } else {
+            // === LOGIKA VERTIKAL (TABEL KE BAWAH: NO SOAL | BAGIAN / LABEL | ISI / TEKS) ===
+            $currentLines = [];
+            $currentImage = null;
+            $currentQNum = null;
+
+            foreach ($allRows as $rowNum => $rowData) {
+                if (isset($rowImages[$rowNum])) {
+                    $currentImage = $rowImages[$rowNum];
                 }
 
-                $img = $rowImages[$rowNum] ?? ($namedRow['gambar'] ?? '');
+                $colA = trim((string)($rowData['A'] ?? ''));
+                $colB = trim((string)($rowData['B'] ?? ''));
+                $colC = trim((string)($rowData['C'] ?? ''));
 
-                $lines = [];
-                $typeVal = $namedRow['tipe'] ?? ($namedRow['type'] ?? 'mc');
-                if (empty($typeVal) && empty($namedRow['pertanyaan'])) continue;
+                if ($colA === '' && $colB === '' && $colC === '') continue;
 
-                $lines[] = 'TIPE: ' . ($typeVal ?: 'mc');
-                if (!empty($namedRow['pertanyaan'])) $lines[] = 'PERTANYAAN: ' . $namedRow['pertanyaan'];
-                $caseVal = $namedRow['teks_kasus'] ?? ($namedRow['kasus'] ?? ($namedRow['bacaan'] ?? ''));
-                if (!empty($caseVal)) $lines[] = 'KASUS: ' . $caseVal;
-                $stmtVal = $namedRow['pernyataan'] ?? ($namedRow['statement'] ?? '');
-                if (!empty($stmtVal)) $lines[] = 'PERNYATAAN: ' . $stmtVal;
-                $reasonVal = $namedRow['alasan'] ?? ($namedRow['reason'] ?? '');
-                if (!empty($reasonVal)) $lines[] = 'ALASAN: ' . $reasonVal;
-                if (!empty($namedRow['opsi_a'])) $lines[] = 'A: ' . $namedRow['opsi_a'];
-                if (!empty($namedRow['opsi_b'])) $lines[] = 'B: ' . $namedRow['opsi_b'];
-                if (!empty($namedRow['opsi_c'])) $lines[] = 'C: ' . $namedRow['opsi_c'];
-                if (!empty($namedRow['opsi_d'])) $lines[] = 'D: ' . $namedRow['opsi_d'];
-                if (!empty($namedRow['opsi_e'])) $lines[] = 'E: ' . $namedRow['opsi_e'];
-                $matchVal = $namedRow['pasangan_menjodohkan'] ?? ($namedRow['jodohkan'] ?? ($namedRow['pasangan'] ?? ''));
-                if (!empty($matchVal)) {
-                    $lines[] = 'PASANGAN: ' . $matchVal;
+                // Abaikan header tabel pada baris 1 (misal "NO SOAL", "BAGIAN / LABEL", "ISI / TEKS SOAL")
+                if ($rowNum === 1) {
+                    $cleanA = strtolower(preg_replace('/[^a-z]/', '', $colA));
+                    $cleanB = strtolower(preg_replace('/[^a-z]/', '', $colB));
+                    if (($cleanA === 'no' || $cleanA === 'nosoal' || $cleanA === 'nomor') || ($cleanB === 'bagian' || $cleanB === 'label' || $cleanB === 'bagianlabel')) {
+                        continue;
+                    }
                 }
-                $keyVal = $namedRow['kunci_jawaban'] ?? ($namedRow['kunci'] ?? ($namedRow['jawaban'] ?? ($namedRow['rubrik'] ?? ($namedRow['pedoman'] ?? ''))));
-                if (!empty($keyVal)) $lines[] = 'KUNCI: ' . $keyVal;
-                if (!empty($namedRow['pembahasan'])) $lines[] = 'PEMBAHASAN: ' . $namedRow['pembahasan'];
 
-                $blocks[] = ['lines' => $lines, 'image' => $img];
+                // Pemisah antar soal dengan "---" atau "==="
+                if ($colA === '---' || $colA === '===' || $colB === '---' || $colB === '===') {
+                    if (!empty($currentLines)) {
+                        $blocks[] = ['lines' => $currentLines, 'image' => $currentImage];
+                        $currentLines = [];
+                        $currentImage = null;
+                        $currentQNum = null;
+                    }
+                    continue;
+                }
+
+                $rowQNum = '';
+                $label = '';
+                $val = '';
+
+                if (isset($rowData['C'])) {
+                    // 3 kolom: A=No, B=Label, C=Isi
+                    $rowQNum = $colA;
+                    $label = $colB;
+                    $val = $colC;
+                } elseif (isset($rowData['B'])) {
+                    // 2 kolom: A=Label, B=Isi
+                    $label = $colA;
+                    $val = $colB;
+                } else {
+                    $val = $colA;
+                }
+
+                if ($label === '' && preg_match('/^(TIPE|TYPE|PERTANYAAN|SOAL|QUESTION|KASUS|BACAAN|PERNYATAAN|ALASAN|A|B|C|D|E|OPSI\s*[A-E]|PASANGAN|JODOHKAN|KUNCI|PEMBAHASAN)\s*[:=]\s*(.+)$/i', $val, $m)) {
+                    $label = $m[1];
+                    $val = $m[2];
+                }
+
+                $cleanLabel = strtoupper(trim(preg_replace('/[^a-zA-Z0-9]/', '', $label)));
+
+                // Deteksi pergantian nomor soal pada kolom A
+                if ($rowQNum !== '' && is_numeric($rowQNum)) {
+                    $numVal = (int)$rowQNum;
+                    if ($currentQNum !== null && $numVal !== $currentQNum && !empty($currentLines)) {
+                        $blocks[] = ['lines' => $currentLines, 'image' => $currentImage];
+                        $currentLines = [];
+                        $currentImage = null;
+                    }
+                    $currentQNum = $numVal;
+                }
+
+                // Jika terdeteksi TIPE baru padahal blok sebelumnya sudah memiliki pertanyaan/opsi, buat blok baru
+                if (($cleanLabel === 'TIPE' || $cleanLabel === 'TYPE') && !empty($currentLines)) {
+                    $hasQuestionAlready = false;
+                    foreach ($currentLines as $cl) {
+                        if (strpos($cl, 'PERTANYAAN:') === 0 || strpos($cl, 'A:') === 0 || strpos($cl, 'PERNYATAAN:') === 0) {
+                            $hasQuestionAlready = true;
+                            break;
+                        }
+                    }
+                    if ($hasQuestionAlready) {
+                        $blocks[] = ['lines' => $currentLines, 'image' => $currentImage];
+                        $currentLines = [];
+                        $currentImage = null;
+                    }
+                }
+
+                if ($cleanLabel === 'TIPE' || $cleanLabel === 'TYPE') {
+                    $currentLines[] = 'TIPE: ' . $val;
+                } elseif ($cleanLabel === 'PERTANYAAN' || $cleanLabel === 'SOAL' || $cleanLabel === 'QUESTION') {
+                    $currentLines[] = 'PERTANYAAN: ' . $val;
+                } elseif ($cleanLabel === 'KASUS' || $cleanLabel === 'BACAAN' || $cleanLabel === 'TEKSKASUS' || $cleanLabel === 'PASSAGE') {
+                    $currentLines[] = 'KASUS: ' . $val;
+                } elseif ($cleanLabel === 'PERNYATAAN' || $cleanLabel === 'STATEMENT') {
+                    $currentLines[] = 'PERNYATAAN: ' . $val;
+                } elseif ($cleanLabel === 'ALASAN' || $cleanLabel === 'REASON') {
+                    $currentLines[] = 'ALASAN: ' . $val;
+                } elseif (in_array($cleanLabel, ['A', 'B', 'C', 'D', 'E'])) {
+                    $currentLines[] = $cleanLabel . ': ' . $val;
+                } elseif (preg_match('/^OPSI([A-E])$/i', $cleanLabel, $om)) {
+                    $currentLines[] = strtoupper($om[1]) . ': ' . $val;
+                } elseif ($cleanLabel === 'PASANGAN' || $cleanLabel === 'JODOHKAN' || $cleanLabel === 'PAIR') {
+                    $currentLines[] = 'PASANGAN: ' . $val;
+                } elseif ($cleanLabel === 'KUNCI' || $cleanLabel === 'KUNCIJAWABAN' || $cleanLabel === 'JAWABAN' || $cleanLabel === 'KEY' || $cleanLabel === 'RUBRIK') {
+                    $currentLines[] = 'KUNCI: ' . $val;
+                } elseif ($cleanLabel === 'PEMBAHASAN' || $cleanLabel === 'EXPLANATION') {
+                    $currentLines[] = 'PEMBAHASAN: ' . $val;
+                } elseif ($val !== '') {
+                    if (!empty($label)) {
+                        $currentLines[] = $label . ': ' . $val;
+                    } else {
+                        $currentLines[] = $val;
+                    }
+                }
+            }
+
+            if (!empty($currentLines)) {
+                $blocks[] = ['lines' => $currentLines, 'image' => $currentImage];
             }
         }
         $zip->close();
@@ -542,42 +675,167 @@ class QuestionParserService {
     public static function parseCsvQuestions(string $filePath, string $quizId = 'quiz') {
         $handle = fopen($filePath, 'r');
         if (!$handle) return ['error' => 'Gagal membuka berkas CSV.'];
-        $header = fgetcsv($handle);
-        if (!$header) return ['error' => 'Berkas CSV kosong.'];
-        $headerMap = array_map(fn($h) => strtolower(preg_replace('/[^a-zA-Z0-9_]/', '', $h)), $header);
-        $blocks = [];
-        while (($row = fgetcsv($handle)) !== false) {
-            $named = [];
-            foreach ($row as $i => $v) {
-                $k = $headerMap[$i] ?? "col_$i";
-                $named[$k] = trim($v);
-            }
-            $lines = [];
-            $t = $named['tipe'] ?? ($named['type'] ?? 'mc');
-            if (empty($t) && empty($named['pertanyaan'])) continue;
-            $lines[] = 'TIPE: ' . ($t ?: 'mc');
-            if (!empty($named['pertanyaan'])) $lines[] = 'PERTANYAAN: ' . $named['pertanyaan'];
-            $caseVal = $named['teks_kasus'] ?? ($named['kasus'] ?? ($named['bacaan'] ?? ''));
-            if (!empty($caseVal)) $lines[] = 'KASUS: ' . $caseVal;
-            $stmtVal = $named['pernyataan'] ?? ($named['statement'] ?? '');
-            if (!empty($stmtVal)) $lines[] = 'PERNYATAAN: ' . $stmtVal;
-            $reasonVal = $named['alasan'] ?? ($named['reason'] ?? '');
-            if (!empty($reasonVal)) $lines[] = 'ALASAN: ' . $reasonVal;
-            if (!empty($named['opsi_a'])) $lines[] = 'A: ' . $named['opsi_a'];
-            if (!empty($named['opsi_b'])) $lines[] = 'B: ' . $named['opsi_b'];
-            if (!empty($named['opsi_c'])) $lines[] = 'C: ' . $named['opsi_c'];
-            if (!empty($named['opsi_d'])) $lines[] = 'D: ' . $named['opsi_d'];
-            if (!empty($named['opsi_e'])) $lines[] = 'E: ' . $named['opsi_e'];
-            $matchVal = $named['pasangan_menjodohkan'] ?? ($named['jodohkan'] ?? ($named['pasangan'] ?? ''));
-            if (!empty($matchVal)) {
-                $lines[] = 'PASANGAN: ' . $matchVal;
-            }
-            $keyVal = $named['kunci_jawaban'] ?? ($named['kunci'] ?? ($named['jawaban'] ?? ''));
-            if (!empty($keyVal)) $lines[] = 'KUNCI: ' . $keyVal;
-            if (!empty($named['pembahasan'])) $lines[] = 'PEMBAHASAN: ' . $named['pembahasan'];
-            $blocks[] = ['lines' => $lines, 'image' => $named['gambar'] ?? ''];
+        $firstRow = fgetcsv($handle);
+        if (!$firstRow) {
+            fclose($handle);
+            return ['error' => 'Berkas CSV kosong.'];
         }
-        fclose($handle);
-        return self::parseQuestionBlocks($blocks);
+
+        $cleanCol0 = strtolower(preg_replace('/[^a-z]/', '', $firstRow[0] ?? ''));
+        $cleanCol1 = strtolower(preg_replace('/[^a-z]/', '', $firstRow[1] ?? ''));
+        $isHorizontal = ($cleanCol0 === 'tipe' || $cleanCol0 === 'type') && ($cleanCol1 === 'pertanyaan' || $cleanCol1 === 'question');
+
+        if ($isHorizontal) {
+            $headerMap = array_map(fn($h) => strtolower(preg_replace('/[^a-zA-Z0-9_]/', '', $h)), $firstRow);
+            $blocks = [];
+            while (($row = fgetcsv($handle)) !== false) {
+                $named = [];
+                foreach ($row as $i => $v) {
+                    $k = $headerMap[$i] ?? "col_$i";
+                    $named[$k] = trim($v);
+                }
+                $lines = [];
+                $t = $named['tipe'] ?? ($named['type'] ?? 'mc');
+                if (empty($t) && empty($named['pertanyaan'])) continue;
+                $lines[] = 'TIPE: ' . ($t ?: 'mc');
+                if (!empty($named['pertanyaan'])) $lines[] = 'PERTANYAAN: ' . $named['pertanyaan'];
+                $caseVal = $named['teks_kasus'] ?? ($named['kasus'] ?? ($named['bacaan'] ?? ''));
+                if (!empty($caseVal)) $lines[] = 'KASUS: ' . $caseVal;
+                $stmtVal = $named['pernyataan'] ?? ($named['statement'] ?? '');
+                if (!empty($stmtVal)) $lines[] = 'PERNYATAAN: ' . $stmtVal;
+                $reasonVal = $named['alasan'] ?? ($named['reason'] ?? '');
+                if (!empty($reasonVal)) $lines[] = 'ALASAN: ' . $reasonVal;
+                if (!empty($named['opsi_a'])) $lines[] = 'A: ' . $named['opsi_a'];
+                if (!empty($named['opsi_b'])) $lines[] = 'B: ' . $named['opsi_b'];
+                if (!empty($named['opsi_c'])) $lines[] = 'C: ' . $named['opsi_c'];
+                if (!empty($named['opsi_d'])) $lines[] = 'D: ' . $named['opsi_d'];
+                if (!empty($named['opsi_e'])) $lines[] = 'E: ' . $named['opsi_e'];
+                $matchVal = $named['pasangan_menjodohkan'] ?? ($named['jodohkan'] ?? ($named['pasangan'] ?? ''));
+                if (!empty($matchVal)) {
+                    $lines[] = 'PASANGAN: ' . $matchVal;
+                }
+                $keyVal = $named['kunci_jawaban'] ?? ($named['kunci'] ?? ($named['jawaban'] ?? ''));
+                if (!empty($keyVal)) $lines[] = 'KUNCI: ' . $keyVal;
+                if (!empty($named['pembahasan'])) $lines[] = 'PEMBAHASAN: ' . $named['pembahasan'];
+                $blocks[] = ['lines' => $lines, 'image' => $named['gambar'] ?? ''];
+            }
+            fclose($handle);
+            return self::parseQuestionBlocks($blocks);
+        } else {
+            // Vertikal CSV
+            $csvRows = [$firstRow];
+            while (($r = fgetcsv($handle)) !== false) {
+                $csvRows[] = $r;
+            }
+            fclose($handle);
+
+            $blocks = [];
+            $currentLines = [];
+            $currentQNum = null;
+
+            foreach ($csvRows as $idx => $row) {
+                $colA = trim((string)($row[0] ?? ''));
+                $colB = trim((string)($row[1] ?? ''));
+                $colC = trim((string)($row[2] ?? ''));
+
+                if ($colA === '' && $colB === '' && $colC === '') continue;
+
+                if ($idx === 0) {
+                    $cleanA = strtolower(preg_replace('/[^a-z]/', '', $colA));
+                    $cleanB = strtolower(preg_replace('/[^a-z]/', '', $colB));
+                    if (($cleanA === 'no' || $cleanA === 'nosoal' || $cleanA === 'nomor') || ($cleanB === 'bagian' || $cleanB === 'label' || $cleanB === 'bagianlabel')) {
+                        continue;
+                    }
+                }
+
+                if ($colA === '---' || $colA === '===' || $colB === '---' || $colB === '===') {
+                    if (!empty($currentLines)) {
+                        $blocks[] = ['lines' => $currentLines, 'image' => ''];
+                        $currentLines = [];
+                        $currentQNum = null;
+                    }
+                    continue;
+                }
+
+                $rowQNum = '';
+                $label = '';
+                $val = '';
+
+                if (isset($row[2])) {
+                    $rowQNum = $colA;
+                    $label = $colB;
+                    $val = $colC;
+                } elseif (isset($row[1])) {
+                    $label = $colA;
+                    $val = $colB;
+                } else {
+                    $val = $colA;
+                }
+
+                if ($label === '' && preg_match('/^(TIPE|TYPE|PERTANYAAN|SOAL|QUESTION|KASUS|BACAAN|PERNYATAAN|ALASAN|A|B|C|D|E|OPSI\s*[A-E]|PASANGAN|JODOHKAN|KUNCI|PEMBAHASAN)\s*[:=]\s*(.+)$/i', $val, $m)) {
+                    $label = $m[1];
+                    $val = $m[2];
+                }
+
+                $cleanLabel = strtoupper(trim(preg_replace('/[^a-zA-Z0-9]/', '', $label)));
+
+                if ($rowQNum !== '' && is_numeric($rowQNum)) {
+                    $numVal = (int)$rowQNum;
+                    if ($currentQNum !== null && $numVal !== $currentQNum && !empty($currentLines)) {
+                        $blocks[] = ['lines' => $currentLines, 'image' => ''];
+                        $currentLines = [];
+                    }
+                    $currentQNum = $numVal;
+                }
+
+                if (($cleanLabel === 'TIPE' || $cleanLabel === 'TYPE') && !empty($currentLines)) {
+                    $hasQuestionAlready = false;
+                    foreach ($currentLines as $cl) {
+                        if (strpos($cl, 'PERTANYAAN:') === 0 || strpos($cl, 'A:') === 0 || strpos($cl, 'PERNYATAAN:') === 0) {
+                            $hasQuestionAlready = true;
+                            break;
+                        }
+                    }
+                    if ($hasQuestionAlready) {
+                        $blocks[] = ['lines' => $currentLines, 'image' => ''];
+                        $currentLines = [];
+                    }
+                }
+
+                if ($cleanLabel === 'TIPE' || $cleanLabel === 'TYPE') {
+                    $currentLines[] = 'TIPE: ' . $val;
+                } elseif ($cleanLabel === 'PERTANYAAN' || $cleanLabel === 'SOAL' || $cleanLabel === 'QUESTION') {
+                    $currentLines[] = 'PERTANYAAN: ' . $val;
+                } elseif ($cleanLabel === 'KASUS' || $cleanLabel === 'BACAAN' || $cleanLabel === 'TEKSKASUS' || $cleanLabel === 'PASSAGE') {
+                    $currentLines[] = 'KASUS: ' . $val;
+                } elseif ($cleanLabel === 'PERNYATAAN' || $cleanLabel === 'STATEMENT') {
+                    $currentLines[] = 'PERNYATAAN: ' . $val;
+                } elseif ($cleanLabel === 'ALASAN' || $cleanLabel === 'REASON') {
+                    $currentLines[] = 'ALASAN: ' . $val;
+                } elseif (in_array($cleanLabel, ['A', 'B', 'C', 'D', 'E'])) {
+                    $currentLines[] = $cleanLabel . ': ' . $val;
+                } elseif (preg_match('/^OPSI([A-E])$/i', $cleanLabel, $om)) {
+                    $currentLines[] = strtoupper($om[1]) . ': ' . $val;
+                } elseif ($cleanLabel === 'PASANGAN' || $cleanLabel === 'JODOHKAN' || $cleanLabel === 'PAIR') {
+                    $currentLines[] = 'PASANGAN: ' . $val;
+                } elseif ($cleanLabel === 'KUNCI' || $cleanLabel === 'KUNCIJAWABAN' || $cleanLabel === 'JAWABAN' || $cleanLabel === 'KEY' || $cleanLabel === 'RUBRIK') {
+                    $currentLines[] = 'KUNCI: ' . $val;
+                } elseif ($cleanLabel === 'PEMBAHASAN' || $cleanLabel === 'EXPLANATION') {
+                    $currentLines[] = 'PEMBAHASAN: ' . $val;
+                } elseif ($val !== '') {
+                    if (!empty($label)) {
+                        $currentLines[] = $label . ': ' . $val;
+                    } else {
+                        $currentLines[] = $val;
+                    }
+                }
+            }
+
+            if (!empty($currentLines)) {
+                $blocks[] = ['lines' => $currentLines, 'image' => ''];
+            }
+
+            return self::parseQuestionBlocks($blocks);
+        }
     }
 }

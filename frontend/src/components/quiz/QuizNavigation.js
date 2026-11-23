@@ -8,6 +8,7 @@ import { Storage } from '../../utils/storage.js';
 import { examApi } from '../../api/examApi.js';
 import { stopTimer } from '../../hooks/useTimer.js';
 import { stopAntiCheat } from '../../hooks/useAntiCheat.js';
+import { setSaveStatus } from '../../hooks/useAutoSave.js';
 import { isQuestionAnswered, jumpToQuestion } from './QuestionPalette.js';
 import { renderCurrentQuestion } from './QuestionCard.js';
 import { appAlert, appConfirm } from '../common/Modal.js';
@@ -127,6 +128,7 @@ export async function submitQuiz(forceSubmit = false) {
 
         ExamContext.setResult(submissionRecord);
         Storage.clearActiveAttempt();
+        Storage.clearPendingSubmission();
         ExamContext.setAttemptToken(null);
 
         // Simpan sesi hasil ke sessionStorage (BUKAN localStorage)
@@ -141,7 +143,23 @@ export async function submitQuiz(forceSubmit = false) {
         startReviewPermissionPolling();
     } catch (err) {
         console.error('Gagal mengirim jawaban ke API:', err);
-        appAlert('Gagal mengirim jawaban ke server. Periksa koneksi LAN lalu coba lagi.');
+        // Simpan ke outbox antrean submit offline agar jawaban tidak hilang dan dikirim otomatis saat koneksi pulih
+        Storage.setPendingSubmission({
+            attempt_token: attemptToken,
+            force_submit: forceSubmit,
+            answers: answers,
+            date: new Date().toISOString(),
+            nis: activeStudent?.nis || '',
+            name: activeStudent?.name || '',
+            class: activeStudent?.classId || '',
+            quiz_id: currentQuiz?.id || '',
+            title: currentQuiz?.title || 'Ujian CBT'
+        });
+        Storage.setPendingAnswers(answers);
+        stopTimer();
+        stopAntiCheat();
+        setSaveStatus('⚠ Offline: Jawaban siap kirim tersimpan lokal', 'text-amber-600');
+        appAlert('Koneksi LAN terputus saat mengirimkan jawaban ke server.\n\nJangan panik! SELURUH JAWABAN ANDA TELAH TERSIMPAN AMAN di komputer ini.\n\nSistem akan otomatis mengirimkannya begitu kabel LAN/jaringan terhubung kembali, atau Anda dapat menekan tombol Refresh pada menu atas.', 'Jawaban Tersimpan Lokal (Offline)');
     }
 }
 

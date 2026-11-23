@@ -95,9 +95,11 @@
                             <option value="100">100</option>
                         </select>
 
-                        <!-- 2. Sort (Short) -->
-                        <select id="student-sort" onchange="handleSearchFilter()" class="px-1.5 py-1.5 w-[80px] rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-700 outline-none" title="Pengurutan data">
-                            <option value="default">Short</option>
+                        <!-- 2. Sort -->
+                        <select id="student-sort" onchange="handleSearchFilter()" class="px-1.5 py-1.5 w-[90px] rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-700 outline-none" title="Pengurutan data">
+                            <option value="default" selected>Short</option>
+                            <option value="absen_asc">Absen (1 - 9)</option>
+                            <option value="absen_desc">Absen (9 - 1)</option>
                             <option value="nis_asc">NIS (0 - 9)</option>
                             <option value="nis_desc">NIS (9 - 0)</option>
                             <option value="name_asc">Nama (A - Z)</option>
@@ -154,6 +156,7 @@
                                         <input id="select-all-students" type="checkbox" onchange="toggleSelectAll(this.checked)" class="w-3.5 h-3.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500 cursor-pointer">
                                     </th>
                                     <th class="w-12 text-center">No</th>
+                                    <th class="w-16 text-center">No. Absen</th>
                                     <th class="w-12 text-center">Foto</th>
                                     <th>No. Induk</th>
                                     <th>Nama Siswa</th>
@@ -165,7 +168,7 @@
                             </thead>
                             <tbody id="students-tbody" class="divide-y divide-slate-100">
                                 <tr>
-                                    <td colspan="9" class="p-8 text-center text-slate-400">
+                                    <td colspan="10" class="p-8 text-center text-slate-400">
                                         <i class="fa-solid fa-spinner fa-spin mr-1"></i> Memuat data siswa...
                                     </td>
                                 </tr>
@@ -201,9 +204,15 @@
                 <input type="hidden" id="student-mode" value="add">
                 <input type="hidden" id="student-original-nis" value="">
 
-                <div>
-                    <label class="block font-semibold text-slate-700 mb-1">Nomor Induk Siswa (NIS) <span class="text-rose-500">*</span></label>
-                    <input type="text" id="form-student-nis" required maxlength="12" placeholder="Contoh: 10245" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 outline-none text-xs">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Nomor Absen</label>
+                        <input type="number" id="form-student-no-absen" min="1" placeholder="Contoh: 1" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 outline-none text-xs">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Nomor Induk (NIS) <span class="text-rose-500">*</span></label>
+                        <input type="text" id="form-student-nis" required maxlength="12" placeholder="Contoh: 10245" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 outline-none text-xs">
+                    </div>
                 </div>
 
                 <div>
@@ -255,7 +264,7 @@
             <div class="space-y-3 text-xs">
                 <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2">
                     <p class="font-bold text-emerald-900">Format File Excel yang Didukung:</p>
-                    <p class="text-emerald-800 text-[11px]">Sistem kini otomatis mendeteksi <strong>Template Standar</strong> (kolom <code>No Induk</code>, <code>Nama</code>, <code>Kelas</code>, <code>Tahun Ajaran</code>) maupun berkas <strong>Buku Presensi / Absensi Kelas</strong> resmi sekolah.</p>
+                    <p class="text-emerald-800 text-[11px]">Sistem kini otomatis mendeteksi <strong>Template Standar</strong> (kolom <code>No</code>, <code>No Absen</code>, <code>No Induk</code>, <code>Nama</code>, <code>Kelas</code>, <code>Tahun Ajaran</code>) maupun berkas <strong>Buku Presensi / Absensi Kelas</strong> resmi sekolah.</p>
                     <button type="button" onclick="downloadStudentTemplate()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-2xs">
                         <i class="fa-solid fa-download"></i> Unduh Template Excel Standar
                     </button>
@@ -441,6 +450,31 @@
             handleSearchFilter();
         }
 
+        function compareByAbsen(a, b) {
+            const clsA = (a.class || '').trim();
+            const clsB = (b.class || '').trim();
+            const clsCmp = clsA.localeCompare(clsB, undefined, { numeric: true });
+            if (clsCmp !== 0) return clsCmp;
+
+            const numA = parseInt(a.no_absen, 10);
+            const numB = parseInt(b.no_absen, 10);
+            const hasNumA = !isNaN(numA) && String(a.no_absen ?? '').trim() !== '';
+            const hasNumB = !isNaN(numB) && String(b.no_absen ?? '').trim() !== '';
+
+            if (hasNumA && hasNumB) {
+                if (numA !== numB) return numA - numB;
+            } else if (hasNumA) {
+                return -1;
+            } else if (hasNumB) {
+                return 1;
+            } else if (a.no_absen && b.no_absen) {
+                const strCmp = String(a.no_absen).localeCompare(String(b.no_absen), undefined, { numeric: true });
+                if (strCmp !== 0) return strCmp;
+            }
+
+            return (a.name || '').localeCompare(b.name || '');
+        }
+
         function handleSearchFilter() {
             const q = (document.getElementById('student-search-input')?.value || '').toLowerCase().trim();
             const fClass = document.getElementById('student-filter-class')?.value || 'all';
@@ -459,15 +493,20 @@
             });
 
             const sortMode = document.getElementById('student-sort')?.value || 'default';
-            if (sortMode !== 'default') {
-                filteredStudents.sort((a, b) => {
-                    if (sortMode === 'nis_asc') return (a.nis || '').localeCompare(b.nis || '', undefined, { numeric: true });
-                    if (sortMode === 'nis_desc') return (b.nis || '').localeCompare(a.nis || '', undefined, { numeric: true });
-                    if (sortMode === 'name_asc') return (a.name || '').localeCompare(b.name || '');
-                    if (sortMode === 'name_desc') return (b.name || '').localeCompare(a.name || '');
-                    if (sortMode === 'class_asc') return (a.class || '').localeCompare(b.class || '') || (a.name || '').localeCompare(b.name || '');
-                    return 0;
-                });
+            if (sortMode === 'default' || sortMode === 'absen_asc') {
+                filteredStudents.sort((a, b) => compareByAbsen(a, b));
+            } else if (sortMode === 'absen_desc') {
+                filteredStudents.sort((a, b) => compareByAbsen(b, a));
+            } else if (sortMode === 'nis_asc') {
+                filteredStudents.sort((a, b) => (a.nis || '').localeCompare(b.nis || '', undefined, { numeric: true }));
+            } else if (sortMode === 'nis_desc') {
+                filteredStudents.sort((a, b) => (b.nis || '').localeCompare(a.nis || '', undefined, { numeric: true }));
+            } else if (sortMode === 'name_asc') {
+                filteredStudents.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+            } else if (sortMode === 'name_desc') {
+                filteredStudents.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
+            } else if (sortMode === 'class_asc') {
+                filteredStudents.sort((a, b) => (a.class || '').localeCompare(b.class || '', undefined, { numeric: true }) || compareByAbsen(a, b));
             }
 
             currentPage = 1;
@@ -500,7 +539,7 @@
             if (filteredStudents.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="9" class="p-8 text-center text-slate-400">
+                        <td colspan="10" class="p-8 text-center text-slate-400">
                             <i class="fa-solid fa-user-slash text-2xl mb-1 text-slate-300 block"></i>
                             Tidak ada data siswa yang cocok dengan pencarian / filter.
                         </td>
@@ -522,6 +561,9 @@
 
             tbody.innerHTML = pageData.map((st, idx) => {
                 const rowNo = startIndex + idx + 1; // Nomor Urut Dinamis Berdasarkan Pagination
+                const absenDisplay = (st.no_absen !== undefined && st.no_absen !== null && String(st.no_absen).trim() !== '')
+                    ? escapeHtml(String(st.no_absen).trim())
+                    : '-';
                 const stKey = st.id || st.nis || `std_idx_${idx}`;
                 const isSelected = selectedNisSet.has(stKey);
                 const isRevealed = revealedPasswords.has(stKey);
@@ -538,6 +580,7 @@
                             <input type="checkbox" value="${stKey}" ${isSelected ? 'checked' : ''} onchange="toggleSelectStudent('${stKey}', this.checked)" class="w-3.5 h-3.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500 cursor-pointer">
                         </td>
                         <td class="p-2.5 text-center font-mono font-bold text-slate-400 text-[11px]">${rowNo}</td>
+                        <td class="p-2.5 text-center font-mono font-bold text-brand-700 text-xs">${absenDisplay}</td>
                         <td class="p-2.5 text-center">${avatar}</td>
                         <td class="p-2.5 font-mono font-bold text-slate-700">${nisDisplay}</td>
                         <td class="p-2.5 font-semibold text-slate-800">${escapeHtml(st.name)}</td>
@@ -673,6 +716,7 @@
             document.getElementById('student-id').value = stData ? (stData.id || '') : '';
             document.getElementById('student-mode').value = mode;
             document.getElementById('student-modal-title').innerText = mode === 'add' ? 'Tambah Siswa Baru' : 'Edit Data Siswa';
+            const absenInput = document.getElementById('form-student-no-absen');
             const nisInput = document.getElementById('form-student-nis');
             const nameInput = document.getElementById('form-student-name');
             const classInput = document.getElementById('form-student-class');
@@ -680,12 +724,14 @@
             const origNis = document.getElementById('student-original-nis');
 
             if (mode === 'edit' && stData) {
+                if (absenInput) absenInput.value = stData.no_absen || '';
                 origNis.value = stData.nis || '';
                 nisInput.value = stData.nis || '';
                 nameInput.value = stData.name || '';
                 classInput.value = stData.class || '';
                 yearInput.value = stData.tahun_ajaran || '';
             } else {
+                if (absenInput) absenInput.value = '';
                 origNis.value = '';
                 nisInput.value = '';
                 nameInput.value = '';
@@ -709,6 +755,7 @@
             const studentId = document.getElementById('student-id').value;
             const mode = document.getElementById('student-mode').value;
             const origNis = document.getElementById('student-original-nis').value;
+            const noAbsen = (document.getElementById('form-student-no-absen')?.value || '').trim();
             const nis = document.getElementById('form-student-nis').value.trim();
             const name = document.getElementById('form-student-name').value.trim();
             const classVal = document.getElementById('form-student-class').value.trim();
@@ -733,6 +780,7 @@
                 const action = 'save_student';
                 const payload = {
                     ...(studentId ? { id: studentId } : {}),
+                    no_absen: noAbsen,
                     nis, name, class: classVal, tahun_ajaran: yearVal,
                     ...(mode === 'edit' ? { original_nis: origNis } : {}),
                     ...(photoBase64 ? { photo: photoBase64 } : {})
@@ -816,10 +864,10 @@
 
         function downloadStudentTemplate() {
             const sampleData = [
-                ["No Induk", "Nama", "Kelas", "Tahun Ajaran"],
-                ["1001", "Ahmad Fauzi", "7A", "2026/2027"],
-                ["1002", "Budi Santoso", "7A", "2026/2027"],
-                ["1003", "Citra Dewi", "7B", "2026/2027"]
+                ["No", "No Absen", "No Induk", "Nama", "Kelas", "Tahun Ajaran"],
+                [1, "1", "1001", "Ahmad Fauzi", "7A", "2026/2027"],
+                [2, "2", "1002", "Budi Santoso", "7A", "2026/2027"],
+                [3, "1", "1003", "Citra Dewi", "7B", "2026/2027"]
             ];
             const ws = XLSX.utils.aoa_to_sheet(sampleData);
             const wb = XLSX.utils.book_new();
@@ -879,7 +927,7 @@
                         }
 
                         // Baris data siswa pada tabel absensi:
-                        // Kolom 0 = No urut, Kolom 1 = No Induk / NIS, Kolom 2 = Nama Siswa
+                        // Kolom 0 = No urut / no absen, Kolom 1 = No Induk / NIS, Kolom 2 = Nama Siswa
                         const noVal = String(row[0] || '').trim();
                         const nisVal = String(row[1] || '').trim();
                         const nameVal = String(row[2] || '').trim();
@@ -888,6 +936,7 @@
                             if (!seenNis.has(nisVal)) {
                                 seenNis.add(nisVal);
                                 students.push({
+                                    no_absen: noVal,
                                     nis: nisVal,
                                     name: nameVal,
                                     class: currentClass || "",
@@ -901,16 +950,17 @@
                 // 2. Format Tabel Standar / Template (mencari baris header di baris-baris awal)
                 if (students.length === 0) {
                     let headerRowIndex = -1;
-                    let nisCol = -1, nameCol = -1, classCol = -1, yearCol = -1;
+                    let nisCol = -1, nameCol = -1, classCol = -1, yearCol = -1, absenCol = -1;
 
                     for (let r = 0; r < Math.min(rawRows.length, 25); r++) {
                         const row = rawRows[r];
                         if (!Array.isArray(row)) continue;
 
-                        let tempNis = -1, tempName = -1, tempClass = -1, tempYear = -1;
+                        let tempNis = -1, tempName = -1, tempClass = -1, tempYear = -1, tempAbsen = -1;
                         row.forEach((cell, idx) => {
                             const txt = String(cell || '').trim().toLowerCase();
-                            if (/^(no\.?\s*induk|nis|nisn|nomor\s*induk|induk)$/i.test(txt)) tempNis = idx;
+                            if (/^(no\.?\s*absen|nomor\s*absen|absen|no_absen)$/i.test(txt)) tempAbsen = idx;
+                            else if (/^(no\.?\s*induk|nis|nisn|nomor\s*induk|induk)$/i.test(txt)) tempNis = idx;
                             else if (/^(nama|nama\s*siswa|nama\s*lengkap|nama\s*peserta\s*didik)$/i.test(txt)) tempName = idx;
                             else if (/^(kelas|rombel|tingkat|class)$/i.test(txt)) tempClass = idx;
                             else if (/^(tahun|tahun\s*ajaran|tahun\s*pelajaran|ta|academic\s*year)$/i.test(txt)) tempYear = idx;
@@ -922,6 +972,7 @@
                             nameCol = tempName;
                             classCol = tempClass;
                             yearCol = tempYear;
+                            absenCol = tempAbsen;
                             break;
                         }
                     }
@@ -935,10 +986,12 @@
                             const nameVal = String(row[nameCol] || '').trim();
                             const classVal = classCol !== -1 ? String(row[classCol] || '').trim() : '';
                             const yearVal = yearCol !== -1 ? String(row[yearCol] || '').trim() : '';
+                            const absenVal = absenCol !== -1 ? String(row[absenCol] || '').trim() : '';
 
                             if (nisVal && nameVal && !seenNis.has(nisVal) && !/^(nis|nama|no)/i.test(nisVal)) {
                                 seenNis.add(nisVal);
                                 students.push({
+                                    no_absen: absenVal,
                                     nis: nisVal,
                                     name: nameVal,
                                     class: classVal || "",
@@ -956,10 +1009,12 @@
                 if (sheet) {
                     const json = XLSX.utils.sheet_to_json(sheet, { defval: "" });
                     json.forEach(row => {
-                        let nis = "", name = "", cls = "", year = "";
+                        let nis = "", name = "", cls = "", year = "", absen = "";
                         for (const k of Object.keys(row)) {
                             const cleanKey = k.toLowerCase().replace(/[^a-z0-9]/g, '');
-                            if (cleanKey.includes('induk') || cleanKey.includes('nis')) {
+                            if (cleanKey.includes('absen')) {
+                                if (!absen) absen = String(row[k] || '').trim();
+                            } else if (cleanKey.includes('induk') || cleanKey.includes('nis')) {
                                 if (!nis) nis = String(row[k] || '').trim();
                             } else if (cleanKey.includes('nama') || cleanKey.includes('name')) {
                                 if (!name) name = String(row[k] || '').trim();
@@ -972,6 +1027,7 @@
                         if (nis && name && !seenNis.has(nis)) {
                             seenNis.add(nis);
                             students.push({
+                                no_absen: absen,
                                 nis,
                                 name,
                                 class: cls,

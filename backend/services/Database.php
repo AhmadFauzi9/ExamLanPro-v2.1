@@ -205,6 +205,27 @@ class Database {
         $db['active_attempts'] = $db['active_attempts'] ?? [];
         $db['student_sessions'] = $db['student_sessions'] ?? [];
         $db['audit_logs'] = $db['audit_logs'] ?? [];
+
+        $defaultHost = $_SERVER['SERVER_ADDR'] ?? $_SERVER['LOCAL_ADDR'] ?? $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        if ($defaultHost === '::1' || $defaultHost === '') $defaultHost = '127.0.0.1';
+
+        foreach ($db['audit_logs'] as &$log) {
+            if (empty($log['ip'])) {
+                if (!empty($log['target']) && ($log['target'] === '::1' || preg_match('/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/', $log['target']))) {
+                    $log['ip'] = ($log['target'] === '::1') ? '127.0.0.1' : $log['target'];
+                    if ($log['action'] === 'Login guru') {
+                        $log['target'] = 'Dashboard Guru';
+                    }
+                } else {
+                    $log['ip'] = $defaultHost;
+                }
+                $dirty = true;
+            } elseif ($log['ip'] === '::1') {
+                $log['ip'] = '127.0.0.1';
+                $dirty = true;
+            }
+        }
+        unset($log);
         $db['backups'] = BackupService::getBackupsList($db);
         $db['time_extension_requests'] = $db['time_extension_requests'] ?? [];
         $db['settings'] = $db['settings'] ?? [];

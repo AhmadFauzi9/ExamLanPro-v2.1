@@ -25,7 +25,7 @@ class TeacherAuthController {
             $_SESSION['teacher_last_activity'] = time();
             $_SESSION['teacher_login_limit'] = ['count' => 0, 'until' => 0];
 
-            AuditService::log($db, 'Login guru', $ip);
+            AuditService::log($db, 'Login guru', 'Dashboard Guru', 'Autentikasi sesi berhasil', 'guru', $ip);
             Database::save($db);
 
             Response::success([

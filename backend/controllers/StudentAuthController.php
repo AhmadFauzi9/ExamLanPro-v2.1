@@ -93,6 +93,25 @@ class StudentAuthController {
                     break;
                 }
             }
+            if (!$attemptQuiz) {
+                foreach (($db['trash']['quizzes'] ?? []) as $candidate) {
+                    if ((string)($candidate['id'] ?? '') === $attemptQuizId) {
+                        $attemptQuiz = $candidate;
+                        break;
+                    }
+                }
+            }
+            if (!$attemptQuiz) {
+                $emDb = Database::getEmergencyBackupDb();
+                if ($emDb && !empty($emDb['questions'])) {
+                    foreach ($emDb['questions'] as $candidate) {
+                        if ((string)($candidate['id'] ?? '') === $attemptQuizId) {
+                            $attemptQuiz = $candidate;
+                            break;
+                        }
+                    }
+                }
+            }
 
             if ($isResetAllowed) {
                 $quizPin = strtoupper(trim((string)($attemptQuiz['pin'] ?? '')));
@@ -172,12 +191,56 @@ class StudentAuthController {
             $prevIp = (string)($prev['ip'] ?? '');
             $currentIp = $_SERVER['REMOTE_ADDR'] ?? '';
 
-            if (($prevIp !== '' && $prevIp !== $currentIp) || (time() - $lastSeen < 60)) {
-                Response::json([
-                    'status' => 'locked',
-                    'message' => "Sesi ujian Anda masih aktif atau terkunci di perangkat ujian lab. Jika komputer Anda mati, restart, atau kabel listrik tersenggol, silakan lapor kepada Guru Pengawas untuk melakukan 'Reset Sesi' di halaman Monitoring Ujian agar Anda dapat lanjut ujian tanpa kehilangan jawaban."
-                ], 403);
+            // Jika siswa login kembali dari komputer/IP yang sama, otomatis pulihkan sesi ujian aktif
+            if ($prevIp === '' || $prevIp === $currentIp) {
+                if (isset($db['student_sessions'][$nis])) {
+                    $db['student_sessions'][$nis]['last_seen'] = time();
+                    $db['student_sessions'][$nis]['status'] = 'WORKING';
+                    $db['student_sessions'][$nis]['ip'] = $currentIp;
+                }
+                if (isset($db['active_attempts'][$activeAttemptKey])) {
+                    $db['active_attempts'][$activeAttemptKey]['updated_at'] = time();
+                }
+
+                AuditService::log($db, 'Siswa resume ujian otomatis', "{$nis} - " . (string)$matched['name'], "Melanjutkan ujian dari perangkat yang sama: " . ($attemptQuiz['title'] ?? $attemptQuizId));
+
+                $tokenToSend = $activeAttempt['token'] ?? '';
+                if ($tokenToSend === '') {
+                    $tokenToSend = bin2hex(random_bytes(32));
+                    $newHash = Utils::attemptKey($tokenToSend);
+                    $db['active_attempts'][$newHash] = $activeAttempt;
+                    $db['active_attempts'][$newHash]['token'] = $tokenToSend;
+                    $db['active_attempts'][$newHash]['token_hash'] = $newHash;
+                    if ($newHash !== $activeAttemptKey) {
+                        unset($db['active_attempts'][$activeAttemptKey]);
+                    }
+                }
+                Database::save($db);
+
+                Response::success([
+                    'resume_attempt' => true,
+                    'message' => 'Sesi ujian Anda dipulihkan otomatis. Seluruh progres dan jawaban tersimpan aman di server.',
+                    'student' => [
+                        'nis' => (string)$matched['nis'],
+                        'name' => (string)$matched['name'],
+                        'class' => (string)$matched['class'],
+                        'tahun_ajaran' => (string)($matched['tahun_ajaran'] ?? '')
+                    ],
+                    'attempt' => [
+                        'attempt_token' => $tokenToSend,
+                        'quiz' => $attemptQuiz ? ScoringEngine::publicAttemptQuiz($attemptQuiz, $activeAttempt) : null,
+                        'answers' => $activeAttempt['answers'] ?? [],
+                        'server_now' => time(),
+                        'ends_at' => $activeAttempt['ends_at']
+                    ]
+                ]);
             }
+
+            // Jika login dari perangkat/IP yang berbeda tanpa reset pengawas
+            Response::json([
+                'status' => 'locked',
+                'message' => "Sesi ujian Anda masih aktif di perangkat lab lain. Jika komputer Anda mati, restart, atau berganti perangkat ujian lab, silakan lapor kepada Guru Pengawas untuk melakukan 'Reset Sesi' di halaman Monitoring Ujian agar Anda dapat lanjut ujian tanpa kehilangan jawaban."
+            ], 403);
         }
 
         $db['student_sessions'][$nis] = [

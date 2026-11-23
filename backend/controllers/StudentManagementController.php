@@ -22,8 +22,33 @@ class StudentManagementController {
                 $st['tahun_ajaran'] = '2026-2027';
                 $dirty = true;
             }
+            if (!isset($st['no_absen'])) {
+                $st['no_absen'] = '';
+            }
         }
         unset($st);
+
+        usort($db['students'], function($a, $b) {
+            $classA = trim((string)($a['class'] ?? ''));
+            $classB = trim((string)($b['class'] ?? ''));
+            $clsCmp = strnatcasecmp($classA, $classB);
+            if ($clsCmp !== 0) return $clsCmp;
+
+            $hasAbsenA = isset($a['no_absen']) && trim((string)$a['no_absen']) !== '' && is_numeric($a['no_absen']);
+            $hasAbsenB = isset($b['no_absen']) && trim((string)$b['no_absen']) !== '' && is_numeric($b['no_absen']);
+
+            if ($hasAbsenA && $hasAbsenB) {
+                $diff = (int)$a['no_absen'] - (int)$b['no_absen'];
+                if ($diff !== 0) return $diff;
+            } elseif ($hasAbsenA) {
+                return -1;
+            } elseif ($hasAbsenB) {
+                return 1;
+            }
+
+            return strnatcasecmp((string)($a['name'] ?? ''), (string)($b['name'] ?? ''));
+        });
+
         if ($dirty) Database::save($db);
         Response::json(['students' => $db['students'], 'settings' => $db['settings'] ?? []]);
     }
@@ -32,6 +57,7 @@ class StudentManagementController {
         AuthMiddleware::teacherOnly();
         $input = Utils::getJsonInput();
         $id = trim((string)($input['id'] ?? ''));
+        $no_absen = trim((string)($input['no_absen'] ?? $input['absen'] ?? ''));
         $nis = trim((string)($input['nis'] ?? ''));
         $originalNis = trim((string)($input['original_nis'] ?? ''));
         $name = trim((string)($input['name'] ?? ''));
@@ -61,26 +87,30 @@ class StudentManagementController {
         }
 
         $existingPassword = '';
+        $existingAbsen = '';
         if ($id !== '') {
             foreach ($db['students'] as $st) {
-                if ((string)($st['id'] ?? '') === $id && !empty($st['password'])) {
-                    $existingPassword = (string)$st['password'];
+                if ((string)($st['id'] ?? '') === $id) {
+                    if (!empty($st['password'])) $existingPassword = (string)$st['password'];
+                    if (isset($st['no_absen'])) $existingAbsen = (string)$st['no_absen'];
                     break;
                 }
             }
         }
         if ($existingPassword === '' && $originalNis !== '') {
             foreach ($db['students'] as $st) {
-                if ((string)($st['nis'] ?? '') === $originalNis && !empty($st['password'])) {
-                    $existingPassword = (string)$st['password'];
+                if ((string)($st['nis'] ?? '') === $originalNis) {
+                    if (!empty($st['password'])) $existingPassword = (string)$st['password'];
+                    if (isset($st['no_absen']) && $existingAbsen === '') $existingAbsen = (string)$st['no_absen'];
                     break;
                 }
             }
         }
         if ($existingPassword === '' && $nis !== '') {
             foreach ($db['students'] as $st) {
-                if ((string)($st['nis'] ?? '') === $nis && !empty($st['password'])) {
-                    $existingPassword = (string)$st['password'];
+                if ((string)($st['nis'] ?? '') === $nis) {
+                    if (!empty($st['password'])) $existingPassword = (string)$st['password'];
+                    if (isset($st['no_absen']) && $existingAbsen === '') $existingAbsen = (string)$st['no_absen'];
                     break;
                 }
             }
@@ -88,6 +118,7 @@ class StudentManagementController {
 
         $studentData = [
             'id' => $id !== '' ? $id : ('std_' . bin2hex(random_bytes(6))),
+            'no_absen' => $no_absen !== '' ? $no_absen : $existingAbsen,
             'nis' => $nis,
             'name' => $name,
             'class' => $class,
@@ -185,6 +216,27 @@ class StudentManagementController {
             }
         }
 
+        usort($db['students'], function($a, $b) {
+            $classA = trim((string)($a['class'] ?? ''));
+            $classB = trim((string)($b['class'] ?? ''));
+            $clsCmp = strnatcasecmp($classA, $classB);
+            if ($clsCmp !== 0) return $clsCmp;
+
+            $hasAbsenA = isset($a['no_absen']) && trim((string)$a['no_absen']) !== '' && is_numeric($a['no_absen']);
+            $hasAbsenB = isset($b['no_absen']) && trim((string)$b['no_absen']) !== '' && is_numeric($b['no_absen']);
+
+            if ($hasAbsenA && $hasAbsenB) {
+                $diff = (int)$a['no_absen'] - (int)$b['no_absen'];
+                if ($diff !== 0) return $diff;
+            } elseif ($hasAbsenA) {
+                return -1;
+            } elseif ($hasAbsenB) {
+                return 1;
+            }
+
+            return strnatcasecmp((string)($a['name'] ?? ''), (string)($b['name'] ?? ''));
+        });
+
         AuditService::log($db, $found ? 'Edit siswa' : 'Tambah siswa', $nis !== '' ? $nis : $name);
         Database::save($db);
         Response::json(['status' => 'success', 'message' => 'Data siswa berhasil disimpan.']);
@@ -264,6 +316,7 @@ class StudentManagementController {
             $name = trim((string)($r['name'] ?? ''));
             $class = trim((string)($r['class'] ?? ''));
             $nis = trim((string)($r['nis'] ?? ''));
+            $no_absen = trim((string)($r['no_absen'] ?? $r['absen'] ?? ''));
             $tahun_ajaran = trim((string)($r['tahun_ajaran'] ?? $r['academic_year'] ?? '2026-2027'));
             $photo = (string)($r['photo'] ?? '');
             if ($name === '') continue;
@@ -273,6 +326,9 @@ class StudentManagementController {
                 $db['students'][$idx]['name'] = $name;
                 $db['students'][$idx]['class'] = $class ?: $db['students'][$idx]['class'];
                 $db['students'][$idx]['tahun_ajaran'] = $tahun_ajaran ?: ($db['students'][$idx]['tahun_ajaran'] ?? '2026-2027');
+                if ($no_absen !== '') {
+                    $db['students'][$idx]['no_absen'] = $no_absen;
+                }
                 if (empty($db['students'][$idx]['password'])) {
                     $db['students'][$idx]['password'] = Utils::generateStudentPassword();
                 }
@@ -281,6 +337,7 @@ class StudentManagementController {
             } else {
                 $newSt = [
                     'id' => 'std_' . bin2hex(random_bytes(6)),
+                    'no_absen' => $no_absen,
                     'nis' => $nis,
                     'name' => $name,
                     'class' => $class,
@@ -293,6 +350,27 @@ class StudentManagementController {
                 $imported++;
             }
         }
+
+        usort($db['students'], function($a, $b) {
+            $classA = trim((string)($a['class'] ?? ''));
+            $classB = trim((string)($b['class'] ?? ''));
+            $clsCmp = strnatcasecmp($classA, $classB);
+            if ($clsCmp !== 0) return $clsCmp;
+
+            $hasAbsenA = isset($a['no_absen']) && trim((string)$a['no_absen']) !== '' && is_numeric($a['no_absen']);
+            $hasAbsenB = isset($b['no_absen']) && trim((string)$b['no_absen']) !== '' && is_numeric($b['no_absen']);
+
+            if ($hasAbsenA && $hasAbsenB) {
+                $diff = (int)$a['no_absen'] - (int)$b['no_absen'];
+                if ($diff !== 0) return $diff;
+            } elseif ($hasAbsenA) {
+                return -1;
+            } elseif ($hasAbsenB) {
+                return 1;
+            }
+
+            return strnatcasecmp((string)($a['name'] ?? ''), (string)($b['name'] ?? ''));
+        });
 
         AuditService::log($db, 'Import siswa', "Baru: {$imported}, Diperbarui: {$updated}");
         Database::save($db);

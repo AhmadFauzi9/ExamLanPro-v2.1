@@ -14,19 +14,30 @@ import { renderCurrentQuestion } from './QuestionCard.js';
 import { updateNavbarStudentProfile } from '../common/Header.js';
 import { showToast } from '../common/Toast.js';
 import { appAlert, closeConfirmReloadModal } from '../common/Modal.js';
-import { resetStudentView } from '../result/ResultScreen.js';
+import { resetStudentView, renderResultScreen } from '../result/ResultScreen.js';
+import { startReviewPermissionPolling } from '../result/QuestionBreakdown.js';
 
-export function saveActiveAttempt() {
-    const attemptToken = ExamContext.attemptToken;
+export function saveActiveAttempt(extra = {}) {
+    const attemptToken = ExamContext.attemptToken || extra.attempt_token || extra.token;
     const activeStudent = StudentContext.activeStudent;
     const pendingInfo = ExamContext.pendingExamInfo;
+    const currentQuiz = ExamContext.currentQuiz || extra.quiz;
+    const existing = Storage.getActiveAttempt() || {};
 
-    Storage.setActiveAttempt({
-        token: attemptToken,
-        nis: activeStudent?.nis || pendingInfo?.nis || '',
-        name: activeStudent?.name || pendingInfo?.name || '',
-        classId: activeStudent?.classId || pendingInfo?.classId || ''
-    });
+    const attemptRecord = {
+        ...existing,
+        token: attemptToken || existing.token || '',
+        nis: activeStudent?.nis || pendingInfo?.nis || existing.nis || '',
+        name: activeStudent?.name || pendingInfo?.name || existing.name || '',
+        classId: activeStudent?.classId || pendingInfo?.classId || existing.classId || '',
+        quiz: currentQuiz || existing.quiz || null,
+        ends_at: extra.ends_at !== undefined ? extra.ends_at : (existing.ends_at || 0),
+        server_now: extra.server_now !== undefined ? extra.server_now : (existing.server_now || Math.floor(Date.now() / 1000)),
+        violations_count: extra.violations_count !== undefined ? extra.violations_count : (existing.violations_count || 0),
+        saved_at: Date.now()
+    };
+
+    Storage.setActiveAttempt(attemptRecord);
 }
 
 export function clearActiveAttempt() {
@@ -48,7 +59,13 @@ export function hydrateAttempt(data) {
 
     ExamContext.setAttemptToken(data.attempt_token || data.token);
     ExamContext.setCurrentQuiz(data.quiz);
-    ExamContext.setAnswers(data.answers || {});
+
+    // Gabungkan jawaban: Jawaban lokal di perangkat ini memiliki prioritas tertinggi agar tidak tertimpa
+    const localPending = Storage.getPendingAnswers() || {};
+    const serverAnswers = data.answers || {};
+    const mergedAnswers = { ...serverAnswers, ...localPending };
+    ExamContext.setAnswers(mergedAnswers);
+    Storage.setPendingAnswers(mergedAnswers);
 
     const studentData = {
         nis: data.nis || StudentContext.activeStudent.nis || '',
@@ -56,7 +73,7 @@ export function hydrateAttempt(data) {
         classId: data.class || data.classId || StudentContext.activeStudent.classId || ''
     };
     StudentContext.setStudent(studentData);
-    saveActiveAttempt();
+    saveActiveAttempt(data);
     updateNavbarStudentProfile(studentData.name, studentData.nis, studentData.classId);
 
     const infoEl = document.getElementById('active-student-info');
@@ -95,7 +112,50 @@ export function hydrateAttempt(data) {
 export async function restoreActiveAttemptAfterRefresh() {
     if (ExamContext.currentStudentResult) return false;
 
-    // Membaca sesi aktif dari sessionStorage (BUKAN localStorage)
+    // 1. Periksa apakah ada pengiriman ujian tertunda (pending submission dari kondisi offline)
+    const pendingSubmission = Storage.getPendingSubmission();
+    if (pendingSubmission && pendingSubmission.attempt_token) {
+        try {
+            const submitRes = await examApi.submitResult(pendingSubmission);
+            const resJson = submitRes.data;
+            if (submitRes.ok && resJson?.status === 'success') {
+                Storage.clearPendingSubmission();
+                Storage.clearActiveAttempt();
+                ExamContext.setAttemptToken(null);
+                const submissionRecord = {
+                    nis: pendingSubmission.nis || '',
+                    name: pendingSubmission.name || '',
+                    class: pendingSubmission.class || '',
+                    code: pendingSubmission.quiz_id || '',
+                    title: pendingSubmission.title || 'Ujian CBT',
+                    score: resJson.score || 0,
+                    correct: resJson.correct || 0,
+                    wrong: resJson.wrong || 0,
+                    date: pendingSubmission.date || new Date().toISOString(),
+                    breakdowns: []
+                };
+                ExamContext.setResult(submissionRecord);
+                Storage.setStudentSession({
+                    activeStudent: {
+                        nis: submissionRecord.nis,
+                        name: submissionRecord.name,
+                        classId: submissionRecord.class
+                    },
+                    quizId: submissionRecord.code,
+                    reviewToken: resJson.review_token || null,
+                    result: submissionRecord
+                });
+                renderResultScreen(submissionRecord);
+                startReviewPermissionPolling();
+                showToast('✓ Jawaban ujian berhasil diserahkan ke server saat reload!', 'success');
+                return true;
+            }
+        } catch (subErr) {
+            console.warn('Masih offline saat mencoba submit pending:', subErr);
+        }
+    }
+
+    // 2. Membaca sesi aktif dari storage
     const saved = Storage.getActiveAttempt();
     if (!saved || !saved.token) return false;
 
@@ -123,6 +183,38 @@ export async function restoreActiveAttemptAfterRefresh() {
         hydrateAttempt(d);
         return true;
     } catch (e) {
+        // Pemulihan Offline: Jika jaringan LAN terputus tetapi data kuis dan soal tersimpan di cache lokal
+        if (saved.quiz && Array.isArray(saved.quiz.questions) && saved.quiz.questions.length > 0) {
+            const localAnswers = Storage.getPendingAnswers() || {};
+            let remaining = 0;
+            if (saved.ends_at) {
+                const nowSec = Math.floor(Date.now() / 1000);
+                const elapsedSinceSave = Math.max(0, Math.floor((Date.now() - (saved.saved_at || Date.now())) / 1000));
+                const estimatedServerNow = (Number(saved.server_now) || nowSec) + elapsedSinceSave;
+                remaining = Math.max(0, Number(saved.ends_at) - estimatedServerNow);
+            }
+            const offlineAttempt = {
+                attempt_token: saved.token,
+                quiz: saved.quiz,
+                answers: localAnswers,
+                nis: saved.nis,
+                name: saved.name,
+                class: saved.classId,
+                ends_at: saved.ends_at,
+                server_now: saved.ends_at ? (saved.ends_at - remaining) : Math.floor(Date.now() / 1000),
+                violations_count: saved.violations_count || 0
+            };
+            hydrateAttempt(offlineAttempt);
+            if (Storage.getPendingSubmission()) {
+                setSaveStatus('⚠ Offline: Jawaban tersimpan lokal & menunggu server untuk submit', 'text-amber-600');
+                showToast('Koneksi terputus. Ujian telah selesai dijawab & tersimpan aman secara offline.', 'warning');
+            } else {
+                setSaveStatus('⚠ Mode Offline — Jawaban tersimpan lokal di perangkat', 'text-amber-600');
+                showToast('Koneksi server terputus. Ujian dimuat dari penyimpanan lokal offline.', 'warning');
+            }
+            return true;
+        }
+
         setSaveStatus('⚠ Koneksi terputus — jawaban lokal akan disinkronkan.', 'text-amber-600');
         return false;
     }
@@ -139,10 +231,49 @@ export async function executeLiveReload() {
     setSaveStatus('⟳ Menyinkronkan…', 'text-amber-500');
 
     try {
-        // 1. Simpan jawaban lokal terlebih dahulu jika server online
+        // 1. Cek apakah ada antrean pengiriman ujian yang tertunda (pending submission)
+        const pendingSubmission = Storage.getPendingSubmission();
+        if (pendingSubmission && pendingSubmission.attempt_token) {
+            const submitRes = await examApi.submitResult(pendingSubmission);
+            const resJson = submitRes.data;
+            if (submitRes.ok && resJson?.status === 'success') {
+                Storage.clearPendingSubmission();
+                Storage.clearActiveAttempt();
+                ExamContext.setAttemptToken(null);
+                const submissionRecord = {
+                    nis: pendingSubmission.nis || StudentContext.activeStudent?.nis || '',
+                    name: pendingSubmission.name || StudentContext.activeStudent?.name || '',
+                    class: pendingSubmission.class || StudentContext.activeStudent?.classId || '',
+                    code: pendingSubmission.quiz_id || ExamContext.currentQuiz?.id || '',
+                    title: pendingSubmission.title || ExamContext.currentQuiz?.title || 'Ujian CBT',
+                    score: resJson.score || 0,
+                    correct: resJson.correct || 0,
+                    wrong: resJson.wrong || 0,
+                    date: pendingSubmission.date || new Date().toISOString(),
+                    breakdowns: []
+                };
+                ExamContext.setResult(submissionRecord);
+                Storage.setStudentSession({
+                    activeStudent: {
+                        nis: submissionRecord.nis,
+                        name: submissionRecord.name,
+                        classId: submissionRecord.class
+                    },
+                    quizId: submissionRecord.code,
+                    reviewToken: resJson.review_token || null,
+                    result: submissionRecord
+                });
+                renderResultScreen(submissionRecord);
+                startReviewPermissionPolling();
+                showToast('✓ Jawaban ujian offline berhasil diserahkan ke server!', 'success');
+                return;
+            }
+        }
+
+        // 2. Simpan jawaban lokal terlebih dahulu jika server online
         await syncAnswers();
 
-        // 2. Refresh attempt data dari server via API
+        // 3. Refresh attempt data dari server via API
         if (ExamContext.attemptToken) {
             const res = await examApi.getAttempt(ExamContext.attemptToken);
             const d = res.data;
@@ -165,8 +296,13 @@ export async function executeLiveReload() {
         }
         showToast('✓ Data kuis berhasil disinkronkan!', 'success');
     } catch (err) {
-        setSaveStatus('⚠ Koneksi offline — jawaban lokal aman', 'text-amber-600');
-        showToast('Koneksi server terputus. Jawaban lokal tetap tersimpan aman.', 'warning');
+        if (Storage.getPendingSubmission()) {
+            setSaveStatus('⚠ Offline: Jawaban siap kirim tersimpan lokal', 'text-amber-600');
+            showToast('Koneksi server masih terputus. Seluruh jawaban sudah selesai & aman di komputer.', 'warning');
+        } else {
+            setSaveStatus('⚠ Koneksi offline — jawaban lokal aman', 'text-amber-600');
+            showToast('Koneksi server terputus. Jawaban lokal tetap tersimpan aman.', 'warning');
+        }
     } finally {
         if (btn) {
             btn.disabled = false;

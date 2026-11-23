@@ -47,11 +47,29 @@ export async function syncAnswers() {
 export function initAutoSaveNetworkListener() {
     window.addEventListener('online', async () => {
         try {
+            // 1. Cek apakah ada antrean pengiriman ujian yang tertunda (pending submission)
+            const pendingSub = Storage.getPendingSubmission();
+            if (pendingSub && examApi) {
+                try {
+                    const submitRes = await examApi.submitResult(pendingSub);
+                    if (submitRes.ok && submitRes.data?.status === 'success') {
+                        Storage.clearPendingSubmission();
+                        Storage.clearActiveAttempt();
+                        if (typeof window.executeLiveReload === 'function') {
+                            window.executeLiveReload();
+                            return;
+                        }
+                    }
+                } catch (subErr) {
+                    console.warn('Gagal submit pending saat online event:', subErr);
+                }
+            }
+
+            // 2. Sinkronkan jawaban lokal yang tertunda
             const pending = Storage.getPendingAnswers();
             if (pending && ExamContext.attemptToken) {
                 ExamContext.setAnswers(pending);
                 await syncAnswers();
-                Storage.clearPendingAnswers();
             }
         } catch (e) {
             console.warn('Gagal sinkronisasi jawaban offline:', e);
