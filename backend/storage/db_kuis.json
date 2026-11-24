@@ -13,10 +13,10 @@
             "start_at": "",
             "end_at": "",
             "status": "DRAFT",
-            "pin": "TRZ5XN",
+            "pin": "8G43BD",
             "pin_enabled": true,
             "pin_auto_refresh": true,
-            "pin_updated_at": 1795476515,
+            "pin_updated_at": 1795512097,
             "questions": [
                 {
                     "type": "mc",
@@ -458,8 +458,8 @@
             "start_at": "",
             "end_at": "",
             "status": "ACTIVE",
-            "pin": "",
-            "pin_enabled": false,
+            "pin": "NER6XM",
+            "pin_enabled": true,
             "pin_auto_refresh": false,
             "pin_updated_at": 1795303174,
             "questions": [
@@ -44876,6 +44876,14 @@
         },
         {
             "time": "2026-11-23T23:47:40+01:00",
+            "user": "guru",
+            "action": "Simpan paket kuis",
+            "target": "",
+            "detail": "2 paket",
+            "ip": "127.0.0.1"
+        },
+        {
+            "time": "2026-11-24T03:18:12+01:00",
             "user": "guru",
             "action": "Simpan paket kuis",
             "target": "",

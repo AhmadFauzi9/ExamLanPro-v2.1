@@ -656,6 +656,44 @@
             return s.includes(q);
         }
 
+        // Helper identifier rombel unik (misal: 'VII_L', 'VIII_K')
+        function getRombelKey(classStr) {
+            if (!classStr) return '';
+            const p = parseStudentClass(classStr);
+            if (p.level && p.section) {
+                return `${p.level}_${p.section}`;
+            }
+            return String(classStr).trim().toUpperCase();
+        }
+
+        // Helper untuk mendapatkan siswa target (kandidat) yang rombelnya aktif berpartisipasi pada kuis
+        function getQuizCandidateStudents(filterQuiz, fClass, fSection, quizAttempts) {
+            if (!filterQuiz || filterQuiz === 'all') return [];
+
+            const attempts = quizAttempts || allResults.filter(r => r.code === filterQuiz || r.quiz_id === filterQuiz);
+            const activeRombelSet = new Set();
+            attempts.forEach(r => {
+                const k1 = getRombelKey(r.class);
+                if (k1) activeRombelSet.add(k1);
+                if (r.class) activeRombelSet.add(String(r.class).trim().toUpperCase());
+            });
+
+            const hasSpecificSection = (fClass && fClass !== 'all' && fSection && fSection !== 'all');
+
+            return (dbData.students || []).filter(s => {
+                const sRombel = getRombelKey(s.class);
+                const sRaw = String(s.class || '').trim().toUpperCase();
+                const isRombelActive = (activeRombelSet.has(sRombel) || activeRombelSet.has(sRaw));
+                const isManualSpecificSection = (hasSpecificSection && isStudentInClassFilter(s.class, fClass, fSection));
+
+                if (!isRombelActive && !isManualSpecificSection) {
+                    return false;
+                }
+
+                return isStudentInClassFilter(s.class, fClass, fSection);
+            });
+        }
+
         function onClassFilterChange() {
             populateClassAndSectionFilters();
             updateSummaryCards();
@@ -714,12 +752,19 @@
             const maxScore = total ? Math.max(...scores) : 0;
             const minScore = total ? Math.min(...scores) : 0;
 
-            // Hitung siswa di kelas (hanya jika kelas dipilih secara spesifik)
+            // Hitung siswa di kelas / rombel aktif berpartisipasi
             let masterCount = 0;
             let notTakenCount = 0;
             const targetQuiz = (dbData.questions || []).find(q => q.id === filterQuiz);
 
-            if (hasClassFilter) {
+            if (filterQuiz !== 'all') {
+                const candidateStudents = getQuizCandidateStudents(filterQuiz, fClass, fSection, relevantResults);
+                if (candidateStudents.length > 0) {
+                    masterCount = candidateStudents.length;
+                    const participatedNises = new Set(relevantResults.map(r => String(r.nis || '').trim()));
+                    notTakenCount = candidateStudents.filter(s => !participatedNises.has(String(s.nis || '').trim())).length;
+                }
+            } else if (hasClassFilter) {
                 const classStudents = (dbData.students || []).filter(s => isStudentInClassFilter(s.class, fClass, fSection));
                 masterCount = classStudents.length;
                 const participatedNises = new Set(relevantResults.map(r => String(r.nis || '').trim()));
@@ -763,7 +808,7 @@
                         </div>
                     `;
                     if (elStudentsSub) {
-                        elStudentsSub.innerText = hasClassFilter ? 'Siswa terdaftar di kelas' : 'Siswa terdaftar di angkatan';
+                        elStudentsSub.innerText = hasClassFilter ? 'Siswa terdaftar di kelas' : 'Siswa rombel aktif';
                     }
                 } else if (inProgressCount > 0) {
                     elStudents.innerHTML = `
@@ -997,22 +1042,15 @@
             });
 
             // 2. Kumpulkan siswa yang BELUM MENGIKUTI UJIAN
-            // Hanya disertakan jika filter kelas dipilih secara spesifik (misal 8M atau 7K),
-            // ATAU jika pengguna secara eksplisit memilih filter status "Belum Ujian"
+            // HANYA dari rombel yang sudah pernah / sedang mengikuti ujian ini (atau bagian yang sengaja difilter)
             let notTakenList = [];
-            if (filterQuiz !== 'all' && (hasClassFilter || filterStatus === 'not_taken')) {
-                let candidateStudents = (dbData.students || []);
-                if (hasClassFilter) {
-                    candidateStudents = candidateStudents.filter(s => isStudentInClassFilter(s.class, fClass, fSection));
-                } else if (targetQuiz && targetQuiz.class) {
-                    candidateStudents = candidateStudents.filter(s => matchStudentToQuizGrade(s.class, targetQuiz.class));
-                }
+            if (filterQuiz !== 'all') {
+                const quizAttempts = allResults.filter(r => r.code === filterQuiz || r.quiz_id === filterQuiz);
+                const candidateStudents = getQuizCandidateStudents(filterQuiz, fClass, fSection, quizAttempts);
 
                 const participatedNises = new Set();
-                allResults.forEach(r => {
-                    if (filterQuiz === 'all' || r.code === filterQuiz || r.quiz_id === filterQuiz) {
-                        if (r.nis) participatedNises.add(String(r.nis).trim());
-                    }
+                quizAttempts.forEach(r => {
+                    if (r.nis) participatedNises.add(String(r.nis).trim());
                 });
 
                 candidateStudents.forEach(s => {
@@ -1606,8 +1644,12 @@
             const studentExamCounts = getStudentExamCounts();
 
             if (hasClassFilter) {
-                // KELAS DIPILIH (misal: VIII M): Urutkan 100% mengikuti master siswa di kelas tersebut
-                const masterClassStudents = (dbData.students || []).filter(s => isStudentInClassFilter(s.class, fClass, fSection));
+                // KELAS DIPILIH: Urutkan 100% mengikuti master siswa di rombel aktif tersebut
+                const quizAttempts = allResults.filter(r => filterQuiz === 'all' || r.code === filterQuiz || r.quiz_id === filterQuiz);
+                let masterClassStudents = getQuizCandidateStudents(filterQuiz, fClass, fSection, quizAttempts);
+                if (filterQuiz === 'all' || !masterClassStudents.length) {
+                    masterClassStudents = (dbData.students || []).filter(s => isStudentInClassFilter(s.class, fClass, fSection));
+                }
 
                 if (!masterClassStudents.length) {
                     appAlert("Tidak ada data siswa yang terdaftar di kelas " + activeClassName);
@@ -1795,7 +1837,11 @@
 
             let dataToPrint = filteredResults;
             if (hasClassFilter) {
-                const masterClassStudents = (dbData.students || []).filter(s => isStudentInClassFilter(s.class, fClass, fSection));
+                const quizAttempts = allResults.filter(r => filterQuiz === 'all' || r.code === filterQuiz || r.quiz_id === filterQuiz);
+                let masterClassStudents = getQuizCandidateStudents(filterQuiz, fClass, fSection, quizAttempts);
+                if (filterQuiz === 'all' || !masterClassStudents.length) {
+                    masterClassStudents = (dbData.students || []).filter(s => isStudentInClassFilter(s.class, fClass, fSection));
+                }
                 if (masterClassStudents.length > 0) {
                     masterClassStudents.sort((a, b) => String(a.nis || '').localeCompare(String(b.nis || ''), undefined, { numeric: true }));
                     dataToPrint = masterClassStudents.map((s, idx) => {
@@ -1848,14 +1894,12 @@
                         <tr style="background-color: #fafafa;">
                             <td style="text-align: center;">${idx + 1}</td>
                             <td style="font-family: monospace; text-align: center;">${escapeHtml(s.nis || '-')}</td>
-                            <td><b>${escapeHtml(s.name || '-')}</b></td>
-                            <td style="text-align: center; color: #64748b;">-</td>
-                            <td style="text-align: center;">${escapeHtml(s.class || currentClass)}</td>
-                            <td>${escapeHtml(currentQuizTitle)}</td>
+                            <td style="white-space: nowrap;"><b>${escapeHtml(s.name || '-')}</b></td>
+                            <td style="text-align: center; color: #64748b; white-space: nowrap;">-</td>
                             <td style="text-align: center; color: #94a3b8;">-</td>
                             <td style="text-align: center; color: #94a3b8;">-</td>
                             <td style="text-align: center; font-weight: bold; color: #94a3b8;">-</td>
-                            <td style="text-align: center; font-weight: bold; color: #dc2626;">BELUM IKUT</td>
+                            <td style="text-align: center; font-weight: bold; color: #dc2626; white-space: nowrap;">BELUM IKUT</td>
                         </tr>
                     `;
                 }
@@ -1878,20 +1922,19 @@
                     <tr>
                         <td style="text-align: center;">${idx + 1}</td>
                         <td style="font-family: monospace; text-align: center;">${escapeHtml(s.nis || '-')}</td>
-                        <td><b>${escapeHtml(s.name || '-')}</b></td>
-                        <td style="text-align: center;">${tipeUjian}</td>
-                        <td style="text-align: center;">${escapeHtml(s.class || '-')}</td>
-                        <td>${escapeHtml(s.title || s.code || '-')}</td>
-                        <td style="text-align: center; color: #047857;">${s.correct ?? 0}</td>
-                        <td style="text-align: center; color: #b91c1c;">${s.wrong ?? 0}</td>
-                        <td style="text-align: center; font-weight: bold; font-size: 13px;">${score}</td>
-                        <td style="text-align: center; font-weight: bold; color: ${isPassed ? '#047857' : '#b45309'};">
+                        <td style="white-space: nowrap;"><b>${escapeHtml(s.name || '-')}</b></td>
+                        <td style="text-align: center; white-space: nowrap;">${tipeUjian}</td>
+                        <td style="text-align: center; color: #047857; font-weight: 600;">${s.correct ?? 0}</td>
+                        <td style="text-align: center; color: #b91c1c; font-weight: 600;">${s.wrong ?? 0}</td>
+                        <td style="text-align: center; font-weight: bold; font-size: 12px;">${score}</td>
+                        <td style="text-align: center; font-weight: bold; color: ${isPassed ? '#047857' : '#b45309'}; white-space: nowrap;">
                             ${isPassed ? 'TUNTAS' : 'REMEDIAL'}
                         </td>
                     </tr>
                 `;
             }).join('');
 
+            printWin.document.open();
             printWin.document.write(`
                 <!DOCTYPE html>
                 <html lang="id">
@@ -1899,30 +1942,37 @@
                     <meta charset="UTF-8">
                     <title>Rekapitulasi Hasil Ujian - ${escapeHtml(currentQuizTitle)}</title>
                     <style>
-                        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 11px; color: #1e293b; margin: 25px; line-height: 1.4; }
-                        .kop { border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 15px; text-align: center; }
-                        .kop h2 { margin: 0; font-size: 16px; text-transform: uppercase; letter-spacing: 0.5px; }
-                        .kop p { margin: 3px 0 0; font-size: 11px; color: #475569; }
-                        .meta-grid { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 11px; background: #f8fafc; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 6px; }
-                        .meta-col p { margin: 3px 0; }
+                        @page { size: auto; margin: 10mm; }
+                        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 10.5px; color: #1e293b; margin: 12px; line-height: 1.35; }
+                        .kop { border-bottom: 2px solid #0f172a; padding-bottom: 6px; margin-bottom: 10px; text-align: center; }
+                        .kop h2 { margin: 0; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px; }
+                        .kop p { margin: 2px 0 0; font-size: 10.5px; color: #475569; }
+                        .meta-grid { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 10.5px; background: #f8fafc; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 6px; }
+                        .meta-col p { margin: 2px 0; }
                         .meta-col b { color: #0f172a; }
-                        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-                        th, td { border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 11px; }
-                        th { background: #f1f5f9; text-transform: uppercase; font-size: 10px; color: #334155; }
-                        .stats-box { display: flex; gap: 12px; margin-bottom: 20px; }
-                        .stat-item { flex: 1; border: 1px solid #cbd5e1; padding: 8px; border-radius: 6px; text-align: center; background: #f8fafc; }
-                        .stat-item p { margin: 0; font-size: 10px; color: #64748b; font-weight: 600; text-transform: uppercase; }
-                        .stat-item h3 { margin: 4px 0 0; font-size: 15px; font-weight: 800; color: #0f172a; }
-                        .ttd-box { display: flex; justify-content: space-between; margin-top: 40px; page-break-inside: avoid; }
+                        table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+                        th, td { border: 1px solid #cbd5e1; padding: 4.5px 6px; font-size: 10.5px; }
+                        th { background: #f1f5f9; text-transform: uppercase; font-size: 9.5px; color: #334155; }
+                        .stats-box { display: flex; gap: 10px; margin-bottom: 12px; }
+                        .stat-item { flex: 1; border: 1px solid #cbd5e1; padding: 6px 8px; border-radius: 6px; text-align: center; background: #f8fafc; }
+                        .stat-item p { margin: 0; font-size: 9.5px; color: #64748b; font-weight: 600; text-transform: uppercase; }
+                        .stat-item h3 { margin: 2px 0 0; font-size: 13.5px; font-weight: 800; color: #0f172a; }
+                        .ttd-box { display: flex; justify-content: space-between; margin-top: 30px; page-break-inside: avoid; }
                         .ttd-col { width: 200px; text-align: center; }
-                        .ttd-space { height: 60px; }
+                        .ttd-space { height: 50px; }
                         @media print {
-                            body { margin: 15mm; }
-                            button { display: none; }
+                            body { margin: 0; }
+                            button, .no-print { display: none !important; }
                         }
                     </style>
                 </head>
                 <body>
+                    <div class="no-print" style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
+                        <button type="button" onclick="window.print()" style="padding: 7px 16px; background: #4f46e5; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 12px;">
+                            🖨️ Cetak / Simpan PDF
+                        </button>
+                    </div>
+
                     <div class="kop">
                         <h2>REKAPITULASI EVALUASI HASIL UJIAN SISWA</h2>
                         <p>Sistem Ujian Lab Komputer Berbasis Jaringan Lokal (ExamLAN Pro CBT)</p>
@@ -1942,7 +1992,7 @@
                     <div class="stats-box">
                         <div class="stat-item">
                             <p>Total Peserta</p>
-                            <h3>${scores.length} Siswa</h3>
+                            <h3>${takenCount}${notTakenCount > 0 ? ` / ${totalStudents}` : ''} Siswa</h3>
                         </div>
                         <div class="stat-item">
                             <p>Rata-rata Nilai</p>
@@ -1958,23 +2008,21 @@
                         </div>
                         <div class="stat-item">
                             <p>Ketuntasan Belajar</p>
-                            <h3 style="color: ${passPct >= 75 ? '#047857' : '#b45309'};">${passPct}% (${passed}/${scores.length})</h3>
+                            <h3 style="color: ${passPct >= 75 ? '#047857' : '#b45309'};">${passPct}% (${passed}/${takenCount || 1})</h3>
                         </div>
                     </div>
 
                     <table>
                         <thead>
                             <tr>
-                                <th style="width: 30px;">No</th>
-                                <th style="width: 80px;">NIS</th>
-                                <th>Nama Peserta Didik</th>
-                                <th style="width: 75px; text-align: center;">Tipe Ujian</th>
-                                <th style="width: 75px;">Kelas</th>
-                                <th>Paket Kuis</th>
-                                <th style="width: 45px;">Benar</th>
-                                <th style="width: 45px;">Salah</th>
-                                <th style="width: 65px;">Nilai Akhir</th>
-                                <th style="width: 75px;">Keterangan</th>
+                                <th style="width: 32px; text-align: center;">No</th>
+                                <th style="width: 75px; text-align: center;">NIS</th>
+                                <th style="text-align: left;">Nama Peserta Didik</th>
+                                <th style="width: 80px; text-align: center;">Tipe Ujian</th>
+                                <th style="width: 45px; text-align: center;">Benar</th>
+                                <th style="width: 45px; text-align: center;">Salah</th>
+                                <th style="width: 65px; text-align: center;">Nilai Akhir</th>
+                                <th style="width: 85px; text-align: center;">Keterangan</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1999,7 +2047,12 @@
             `);
             printWin.document.close();
             setTimeout(() => {
-                printWin.print();
+                try {
+                    printWin.focus();
+                    printWin.print();
+                } catch (e) {
+                    console.error('Print trigger error:', e);
+                }
             }, 300);
         }
 
