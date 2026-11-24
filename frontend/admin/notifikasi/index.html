@@ -109,9 +109,14 @@
                             <option value="REJECTED">Ditolak</option>
                         </select>
 
-                        <!-- Filter Kelas -->
-                        <select id="req-filter-class" onchange="applyFilters()" class="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-700 outline-none">
-                            <option value="ALL">Semua Kelas</option>
+                        <!-- Filter: Tingkat / Kelas -->
+                        <select id="req-filter-class" onchange="onClassFilterChange()" class="px-2 py-1.5 w-[75px] rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-700 outline-none cursor-pointer font-medium" title="Filter Tingkat / Kelas">
+                            <option value="ALL">Kelas</option>
+                        </select>
+
+                        <!-- Filter: Bagian / Rombel -->
+                        <select id="req-filter-section" onchange="applyFilters()" class="px-2 py-1.5 w-[75px] rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-700 outline-none cursor-pointer font-medium" title="Filter Bagian / Rombel">
+                            <option value="ALL">Bagian</option>
                         </select>
 
                         <!-- Search -->
@@ -216,24 +221,102 @@
             }
         }
 
-        function populateClassFilter() {
-            const select = document.getElementById('req-filter-class');
-            if (!select) return;
-            const cur = select.value || 'ALL';
-            const classes = Array.from(new Set(allRequests.map(r => r.class).filter(Boolean))).sort();
-            select.innerHTML = '<option value="ALL">Semua Kelas</option>' + classes.map(c => `
-                <option value="${escapeHtml(c)}" ${c === cur ? 'selected' : ''}>${escapeHtml(c)}</option>
+        function sortClassLevels(a, b) {
+            const romanMap = { 'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5, 'VI': 6, 'VII': 7, 'VIII': 8, 'IX': 9, 'X': 10, 'XI': 11, 'XII': 12, '7': 7, '8': 8, '9': 9, '10': 10, '11': 11, '12': 12 };
+            const valA = romanMap[a] || parseInt(a) || 999;
+            const valB = romanMap[b] || parseInt(b) || 999;
+            if (valA !== valB) return valA - valB;
+            return String(a).localeCompare(String(b));
+        }
+
+        function parseStudentClass(rawClass) {
+            if (!rawClass) return { level: '', section: '', raw: '' };
+            const str = String(rawClass).trim();
+            const clean = str.replace(/^(?:kelas|kls)\s+/i, '');
+
+            const match = clean.match(/^((?:XII|XI|IX|X|VIII|VII|VI|V|IV|III|II|I|\d+))(?:\s*[-_./\s]?\s*(.+))?$/i);
+            if (match) {
+                let level = match[1].toUpperCase();
+                let romanMap = { '7': 'VII', '8': 'VIII', '9': 'IX', '10': 'X', '11': 'XI', '12': 'XII' };
+                if (romanMap[level]) level = romanMap[level];
+                let rem = (match[2] || '').trim();
+                let section = '';
+                if (rem) {
+                    const secMatch = rem.match(/^([A-Za-z0-9]+)(?:\s*\(.*\))?$/);
+                    if (secMatch) {
+                        section = secMatch[1].trim().toUpperCase();
+                    } else {
+                        section = rem.replace(/\s*\(.*\)$/, '').trim().toUpperCase();
+                    }
+                }
+                return { level, section, raw: str };
+            }
+            return { level: clean, section: '', raw: str };
+        }
+
+        function populateClassAndSectionFilters() {
+            const classSelect = document.getElementById('req-filter-class');
+            const sectionSelect = document.getElementById('req-filter-section');
+            if (!classSelect) return;
+
+            const currentClass = classSelect.value || 'ALL';
+            const currentSection = sectionSelect ? (sectionSelect.value || 'ALL') : 'ALL';
+
+            const rawClasses = [];
+            allRequests.forEach(r => { if (r.class) rawClasses.push(r.class); });
+            if (window.dbData && Array.isArray(dbData.students)) {
+                dbData.students.forEach(s => { if (s.class) rawClasses.push(s.class); });
+            }
+
+            const parsedList = rawClasses.map(c => parseStudentClass(c));
+            const levels = Array.from(new Set(parsedList.map(p => p.level).filter(Boolean))).sort(sortClassLevels);
+
+            const availableSections = Array.from(new Set(
+                parsedList
+                    .filter(p => currentClass === 'ALL' || p.level === currentClass)
+                    .map(p => p.section)
+                    .filter(Boolean)
+            )).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+            classSelect.innerHTML = '<option value="ALL">Kelas</option>' + levels.map(c => `
+                <option value="${c}" ${c === currentClass ? 'selected' : ''}>${c}</option>
             `).join('');
+
+            if (sectionSelect) {
+                const sectionValid = availableSections.includes(currentSection);
+                sectionSelect.innerHTML = '<option value="ALL">Bagian</option>' + availableSections.map(s => `
+                    <option value="${s}" ${s === currentSection && sectionValid ? 'selected' : ''}>${s}</option>
+                `).join('');
+                if (!sectionValid && currentSection !== 'ALL') {
+                    sectionSelect.value = 'ALL';
+                }
+            }
+        }
+
+        function populateClassFilter() {
+            populateClassAndSectionFilters();
+        }
+
+        function onClassFilterChange() {
+            populateClassAndSectionFilters();
+            applyFilters();
         }
 
         function applyFilters() {
             const statusFilter = document.getElementById('req-filter-status')?.value || 'ALL';
             const classFilter = document.getElementById('req-filter-class')?.value || 'ALL';
+            const sectionFilter = document.getElementById('req-filter-section')?.value || 'ALL';
             const query = (document.getElementById('req-search-input')?.value || '').trim().toLowerCase();
 
             filteredRequests = allRequests.filter(r => {
                 if (statusFilter !== 'ALL' && (r.status || 'PENDING') !== statusFilter) return false;
-                if (classFilter !== 'ALL' && (r.class || '') !== classFilter) return false;
+
+                if (classFilter !== 'ALL' || sectionFilter !== 'ALL') {
+                    const parsed = parseStudentClass(r.class);
+                    if (classFilter !== 'ALL' && parsed.level !== classFilter) return false;
+                    if (sectionFilter !== 'ALL' && parsed.section !== sectionFilter) return false;
+                }
+
                 if (query) {
                     const matchNis = String(r.nis || '').includes(query);
                     const matchName = String(r.name || '').toLowerCase().includes(query);
